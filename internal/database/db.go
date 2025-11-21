@@ -2,34 +2,37 @@ package database
 
 import (
 	"fmt"
+	"os"
 	"time"
 
-	finance2 "github.com/gildo-cordeiro/mapleplan-api/internal/domain/finance"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/domain/tasks"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/domain/user"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/domain"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-// The ConnectDB function receives the DSN and returns the DB instance.
-func ConnectDB(dsn string) (*gorm.DB, error) {
+func NewGormDB() (*gorm.DB, error) {
+	dsn := os.Getenv("DATABASE_DSN")
+	if dsn == "" {
+		return nil, fmt.Errorf("DATABASE_DSN not set; check the .env file or environment variables")
+	}
+
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return nil, fmt.Errorf("erro fatal ao conectar ao PostgreSQL: %w", err)
+		return nil, fmt.Errorf("fatal error connecting to PostgreSQL: %w", err)
 	}
 
-	err = db.AutoMigrate(&user.User{}, &tasks.Task{}, &finance2.Transaction{}, &finance2.Goal{})
+	// Auto-migrate domain models
+	err = db.AutoMigrate(&domain.User{}, &domain.Task{}, &domain.Transaction{}, &domain.Goal{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error migrating the database: %w", err)
 	}
 
-	// Advanced configuration of the connection pool (sql/database)
 	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, fmt.Errorf("erro ao obter a instância PSQL: %w", err)
+		return nil, fmt.Errorf("error obtaining the database instance: %w", err)
 	}
 
-	sqlDB.SetConnMaxIdleTime(10)
+	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 

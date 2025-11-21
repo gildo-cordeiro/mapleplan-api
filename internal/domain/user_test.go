@@ -1,11 +1,9 @@
-package user
+package domain
 
 import (
 	"testing"
 	"time"
 
-	"github.com/gildo-cordeiro/mapleplan-api/internal/domain/finance"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/domain/tasks"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
@@ -21,7 +19,7 @@ func Test_NewUser(t *testing.T) {
 	firstName := "Gildo"
 	lastName := "Duarte"
 
-	transaction := finance.Transaction{
+	transaction := Transaction{
 		Model:           gorm.Model{ID: 1},
 		UserID:          1,
 		Amount:          decimal.NewFromFloat(123.45),
@@ -31,7 +29,7 @@ func Test_NewUser(t *testing.T) {
 		TransactionDate: time.Date(2018, time.April, 26, 1, 2, 3, 0, time.UTC),
 	}
 
-	task := tasks.Task{
+	task := Task{
 		Model:       gorm.Model{ID: 2},
 		UserID:      1,
 		Title:       "Finish report",
@@ -40,7 +38,7 @@ func Test_NewUser(t *testing.T) {
 		IsCompleted: false,
 	}
 
-	goal := finance.Goal{
+	goal := Goal{
 		Model:         gorm.Model{ID: 3},
 		UserID:        1,
 		Name:          "Vacation",

@@ -1,9 +1,7 @@
-package user
+package domain
 
 import (
 	"github.com/gildo-cordeiro/mapleplan-api/internal/contract"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/domain/finance"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/domain/tasks"
 	"gorm.io/gorm"
 )
 
@@ -15,12 +13,12 @@ type User struct {
 	FirstName    string `gorm:"type:varchar(100)" json:"firstName,omitempty"`
 	LastName     string `gorm:"type:varchar(100)" json:"lastName,omitempty"`
 
-	Transaction *finance.Transaction `gorm:"foreignKey:UserID" json:"transaction,omitempty"`
-	Task        *tasks.Task          `gorm:"foreignKey:UserID" json:"task,omitempty"`
-	Goal        *finance.Goal        `gorm:"foreignKey:UserID" json:"goal,omitempty"`
+	Transaction *Transaction `gorm:"foreignKey:UserID" json:"transaction,omitempty"`
+	Task        *Task        `gorm:"foreignKey:UserID" json:"task,omitempty"`
+	Goal        *Goal        `gorm:"foreignKey:UserID" json:"goal,omitempty"`
 }
 
-func NewUser(email, passwordHash, firstName, lastName string, transaction *finance.Transaction, task *tasks.Task, goal *finance.Goal) (*User, error) {
+func NewUser(email, passwordHash, firstName, lastName string, transaction *Transaction, task *Task, goal *Goal) (*User, error) {
 	return &User{
 		Email:        email,
 		PasswordHash: passwordHash,

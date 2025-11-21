@@ -1,0 +1,53 @@
+# Binaries and executables
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+
+# Build output directories
+/bin/
+/build/
+/out/
+/dist/
+
+# Go dependency/vendor dir (remove if you commit vendor/)
+vendor/
+
+# Go tool and package outputs
+pkg/
+Godeps/
+
+# Test & coverage
+coverage.out
+*.coverprofile
+
+# Environment & secrets
+.env
+.env.*.local
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+
+# IDEs and editors
+.idea/
+*.iml
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary / swap
+*~
+*.swp
+*.tmp
+
+# Misc
+coverage/*
+.air.toml
