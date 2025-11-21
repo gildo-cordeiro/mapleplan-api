@@ -23,8 +23,6 @@ coverage.out
 *.coverprofile
 
 # Environment & secrets
-.env
-.env.*.local
 
 # Logs and databases
 *.log
@@ -50,4 +48,3 @@ desktop.ini
 
 # Misc
 coverage/*
-.air.toml
