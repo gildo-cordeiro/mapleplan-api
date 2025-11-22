@@ -49,10 +49,3 @@ go test ./...
 ```powershell
 go run ./cmd/api
 ```
-
-Próximos passos sugeridos
-- Implementar os métodos pendentes do `TaskRepository` (adaptador GORM).
-- Adicionar testes de integração para a camada HTTP.
-- Adicionar um `Makefile` com comandos `make build`, `make run`, `make test`.
-
-Se quiser, eu implemento os métodos do `TaskRepository` e adiciono uma fábrica para configuração (ex.: leitura de DB a partir de `configs`).
