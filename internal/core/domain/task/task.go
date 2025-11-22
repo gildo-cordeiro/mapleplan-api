@@ -1,13 +1,13 @@
-package domain
+package task
 
 import (
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain"
 )
 
 type Task struct {
-	gorm.Model
+	domain.Base
 	UserID uint
 
 	Title       string `gorm:"type:varchar(255);not null"`

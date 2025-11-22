@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gildo-cordeiro/mapleplan-api/internal/contract"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/services"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract"
+	servicePort "github.com/gildo-cordeiro/mapleplan-api/internal/core/ports/services"
 )
 
 type UserHandler struct {
-	UserService services.UserService
+	UserService servicePort.UserService
 }
 
 func (handler *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {

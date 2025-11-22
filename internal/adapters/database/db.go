@@ -5,7 +5,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/gildo-cordeiro/mapleplan-api/internal/domain"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/goal"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/task"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/transaction"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/user"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -22,7 +25,7 @@ func NewGormDB() (*gorm.DB, error) {
 	}
 
 	// Auto-migrate domain models
-	err = db.AutoMigrate(&domain.User{}, &domain.Task{}, &domain.Transaction{}, &domain.Goal{})
+	err = db.AutoMigrate(&user.User{}, &task.Task{}, &transaction.Transaction{}, &goal.Goal{})
 	if err != nil {
 		return nil, fmt.Errorf("error migrating the database: %w", err)
 	}

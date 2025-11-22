@@ -9,9 +9,9 @@ func RegisterRoutes(registry *HandlerRegistry) *mux.Router {
 
 	router.HandleFunc("/health", registry.HealthHandler.Health).Methods("GET")
 
-	userRouter := router.PathPrefix("/users").Subrouter()
+	userRouter := router.PathPrefix("/user").Subrouter()
 	{
-		userRouter.HandleFunc("", registry.UserHandler.CreateUser).Methods("POST")
+		userRouter.HandleFunc("/signup", registry.UserHandler.CreateUser).Methods("POST")
 		userRouter.HandleFunc("/{id}", registry.UserHandler.LoginUser).Methods("POST")
 	}
 

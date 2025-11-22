@@ -1,14 +1,14 @@
-package domain
+package transaction
 
 import (
 	"time"
 
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain"
 	"github.com/shopspring/decimal"
-	"gorm.io/gorm"
 )
 
 type Transaction struct {
-	gorm.Model
+	domain.Base
 	UserID uint
 
 	Amount          decimal.Decimal `gorm:"type:numeric(10, 2);not null"`

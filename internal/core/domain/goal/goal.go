@@ -1,14 +1,14 @@
-package domain
+package goal
 
 import (
 	"time"
 
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain"
 	"github.com/shopspring/decimal"
-	"gorm.io/gorm"
 )
 
 type Goal struct {
-	gorm.Model
+	domain.Base
 	UserID uint
 
 	Name          string          `gorm:"type:varchar(100)"`
