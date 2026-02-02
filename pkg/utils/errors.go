@@ -6,4 +6,5 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrUnauthorized       = errors.New("unauthorized")
 	ErrInternal           = errors.New("internal server error")
+	ErrAlreadyExists      = errors.New("already exists")
 )

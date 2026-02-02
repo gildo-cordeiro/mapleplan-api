@@ -7,4 +7,6 @@ type UserRepository interface {
 	// by the service (use-case) layer.
 	FindByEmail(email string) (*user.User, error)
 	Save(u *user.User) (string, error)
+	FindByID(id string) (*user.User, error)
+	Update(id string, u *user.User) error
 }

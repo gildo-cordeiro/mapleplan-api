@@ -17,7 +17,7 @@ type User struct {
 	LastName     string `gorm:"type:varchar(100)" json:"lastName,omitempty"`
 
 	Transaction *transaction.Transaction `gorm:"foreignKey:UserID" json:"transaction,omitempty"`
-	Task        *task.Task               `gorm:"foreignKey:UserID" json:"tasks,omitempty"`
+	Task        *task.Task               `gorm:"foreignKey:UserID" json:"task,omitempty"`
 	Goal        *goal.Goal               `gorm:"foreignKey:UserID" json:"goal,omitempty"`
 }
 
@@ -33,6 +33,10 @@ func NewUser(email, passwordHash, firstName, lastName string, transaction *trans
 	}, nil
 }
 
-func NewFromDTO(dto contract.CreateNewUserDto, passwordHash string) (*User, error) {
-	return NewUser(dto.Email, passwordHash, dto.Name, dto.LastName, nil, nil, nil)
+func NewFromCreateDTO(dto contract.CreateNewUserDto, passwordHash string) (*User, error) {
+	return NewUser(dto.Email, passwordHash, "", "", nil, nil, nil)
+}
+
+func NewFromUpdateOnboardingDTO(dto contract.UpdateUserOnboardingDto, user *User) (*User, error) {
+	return NewUser(user.Email, user.PasswordHash, dto.FirstName, dto.LastName, user.Transaction, user.Task, user.Goal)
 }

@@ -8,4 +8,5 @@ import (
 type UserService interface {
 	FindByEmailAndPass(email, pass string) (*userDomain.User, error)
 	RegisterUser(contract.CreateNewUserDto) (string, error)
+	UpdateOnboarding(userId string, dto contract.UpdateUserOnboardingDto) error
 }

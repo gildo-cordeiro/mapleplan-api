@@ -15,7 +15,6 @@
 vendor/
 
 # Go tool and package outputs
-pkg/
 Godeps/
 
 # Test & coverage
