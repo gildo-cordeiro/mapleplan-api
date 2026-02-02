@@ -3,7 +3,6 @@ package auth
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"time"
 
@@ -35,7 +34,7 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Printf("Signup: RegisterUser error: %v\n", err)
+		utils.Log.Printf("Signup: RegisterUser error: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
 		return
