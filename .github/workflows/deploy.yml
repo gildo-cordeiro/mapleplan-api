@@ -47,4 +47,4 @@ jobs:
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
         run: |
-          koyeb service update mapleplan-api --docker-image ghcr.io/${{ env.IMAGE_NAME }}:latest
+          koyeb service update mapleplan-api --docker ghcr.io/${{ env.IMAGE_NAME }}:latest
