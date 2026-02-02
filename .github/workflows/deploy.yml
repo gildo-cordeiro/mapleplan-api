@@ -47,5 +47,4 @@ jobs:
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
         run: |
-          # Esse comando avisa o Koyeb para baixar a nova imagem do GHCR
-          koyeb service update mapleplan-api --image ghcr.io/${{ env.IMAGE_NAME }}:latest
+          koyeb service update mapleplan-api --docker-image ghcr.io/${{ env.IMAGE_NAME }}:latest
