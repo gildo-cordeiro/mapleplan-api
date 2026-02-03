@@ -13,12 +13,7 @@ import (
 
 func main() {
 	utils.InitLogger()
-
-	if err := godotenv.Load(); err != nil {
-		utils.Log.Infof("No .env file found or failed to load, continuing with environment variables: %v", err)
-	} else {
-		utils.Log.Info(".env file loaded successfully")
-	}
+	_ = godotenv.Load()
 
 	utils.Log.Info("Starting MaplePlan API...")
 
