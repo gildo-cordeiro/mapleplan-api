@@ -33,7 +33,7 @@ func (h *Handler) UpdateOnboarding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.UserService.UpdateOnboarding(userID, onboardingDto); err != nil {
+	if err := h.UserService.UpdateOnboarding(r.Context(), userID, onboardingDto); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
 		return
@@ -41,4 +41,31 @@ func (h *Handler) UpdateOnboarding(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "onboarding updated successfully"})
+}
+
+func (h *Handler) SearchPartner(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	// Nao tenho user id no contexto aqui pois é uma rota publica, preciso mudar a estratgia.
+	userID, ok := middleware.GetUserIDFromContext(r)
+	if !ok {
+		http.Error(w, "Unauthorized: missing user id", http.StatusUnauthorized)
+		return
+	}
+
+	name := r.URL.Query().Get("query")
+	if name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"message": "name query parameter is required"})
+		return
+	}
+
+	results, err := h.UserService.SearchPartnerByName(userID, name)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(results)
 }

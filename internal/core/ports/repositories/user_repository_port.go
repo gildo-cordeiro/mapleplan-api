@@ -1,12 +1,15 @@
 package repositories
 
-import "github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/user"
+import (
+	"context"
+
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/user"
+)
 
 type UserRepository interface {
-	// FindByEmail returns a user by email. Password verification is handled
-	// by the service (use-case) layer.
-	FindByEmail(email string) (*user.User, error)
+	FindByEmail(ctx context.Context, email string) (*user.User, error)
 	Save(u *user.User) (string, error)
-	FindByID(id string) (*user.User, error)
-	Update(id string, u *user.User) error
+	FindByID(ctx context.Context, id string) (*user.User, error)
+	Update(ctx context.Context, id string, u *user.User) error
+	SearchByName(userID string, name string) ([]*user.User, error)
 }

@@ -20,7 +20,7 @@ func GetUserIDFromContext(r *http.Request) (string, bool) {
 func AuthenticationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Allow unauthenticated access to health check and signup/login endpoints
-		if r.URL.Path == "/health" || r.URL.Path == "/api/v1/auth/signup" || isLoginPath(r) {
+		if r.URL.Path == "/health" || r.URL.Path == "/api/v1/auth/signup" || isPublicPath(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -51,11 +51,22 @@ func AuthenticationMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// isLoginPath checks if the request is a POST to /user/{id}
-func isLoginPath(r *http.Request) bool {
-	if r.Method != http.MethodPost {
-		return false
+// isPublicPath checks if the request path is a public endpoint
+func isPublicPath(r *http.Request) bool {
+	path := r.URL.Path
+
+	// health (GET /health)
+	if r.Method == http.MethodGet && path == "/health" {
+		return true
 	}
-	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	return len(parts) == 2 && parts[0] == "user"
+
+	// auth endpoints (POST /api/v1/auth/signup, POST /api/v1/auth/login)
+	if r.Method == http.MethodPost {
+		switch path {
+		case "/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/search-partner":
+			return true
+		}
+	}
+
+	return false
 }

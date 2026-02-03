@@ -14,6 +14,7 @@ func RegisterRoutes(registry *HandlerRegistry) *mux.Router {
 	{
 		userRouter.HandleFunc("/profile", registry.UserHandler.UpdateProfile).Methods("PUT")
 		userRouter.HandleFunc("/onboarding", registry.UserHandler.UpdateOnboarding).Methods("PUT")
+		userRouter.HandleFunc("/search-partners", registry.UserHandler.SearchPartner).Methods("GET")
 	}
 
 	authRouter := router.PathPrefix("/api/v1/auth").Subrouter()

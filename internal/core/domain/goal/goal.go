@@ -9,7 +9,8 @@ import (
 
 type Goal struct {
 	domain.Base
-	UserID uint
+	UserID   string
+	CoupleID string
 
 	Name          string          `gorm:"type:varchar(100)"`
 	TargetAmount  decimal.Decimal `gorm:"type:numeric(10, 2);not null"`
