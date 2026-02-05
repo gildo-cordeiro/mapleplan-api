@@ -9,4 +9,5 @@ import (
 type CoupleRepository interface {
 	Save(ctx context.Context, c *couple.Couple) error
 	FindByID(id string) (*couple.Couple, error)
+	FindByUserID(ctx context.Context, userID string) (*couple.Couple, error)
 }

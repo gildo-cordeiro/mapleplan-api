@@ -45,7 +45,6 @@ func (h *Handler) UpdateOnboarding(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SearchPartner(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	// Nao tenho user id no contexto aqui pois é uma rota publica, preciso mudar a estratgia.
 	userID, ok := middleware.GetUserIDFromContext(r)
 	if !ok {
 		http.Error(w, "Unauthorized: missing user id", http.StatusUnauthorized)
@@ -68,4 +67,24 @@ func (h *Handler) SearchPartner(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(results)
+}
+
+func (h *Handler) GetCompleteUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	userID, ok := middleware.GetUserIDFromContext(r)
+	if !ok {
+		http.Error(w, "Unauthorized: missing user id", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := h.UserService.GetCompleteUser(r.Context(), userID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(user)
 }

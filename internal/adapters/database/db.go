@@ -7,11 +7,13 @@ import (
 
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/couple"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/goal"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/province"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/task"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/transaction"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/user"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func NewGormDB() (*gorm.DB, error) {
@@ -20,13 +22,15 @@ func NewGormDB() (*gorm.DB, error) {
 		return nil, fmt.Errorf("DATABASE_DSN not set; check the .env file or environment variables")
 	}
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("fatal error connecting to PostgreSQL: %w", err)
 	}
 
 	// Auto-migrate domain models
-	err = db.AutoMigrate(&user.User{}, &task.Task{}, &transaction.Transaction{}, &goal.Goal{}, &couple.Couple{})
+	err = db.AutoMigrate(&user.User{}, &province.Province{}, &couple.Couple{}, &goal.Goal{}, &task.Task{}, &transaction.Transaction{})
 	if err != nil {
 		return nil, fmt.Errorf("error migrating the database: %w", err)
 	}

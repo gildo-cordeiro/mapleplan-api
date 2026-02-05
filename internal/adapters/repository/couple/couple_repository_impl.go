@@ -41,3 +41,11 @@ func (r *RepositoryImpl) FindByID(id string) (*couple.Couple, error) {
 	}
 	return &c, nil
 }
+func (r *RepositoryImpl) FindByUserID(ctx context.Context, userID string) (*couple.Couple, error) {
+	var c couple.Couple
+	err := r.getDB(ctx).Where("user_a_id = ? OR user_b_id = ?", userID, userID).First(&c).Error
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}

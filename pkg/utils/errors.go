@@ -9,4 +9,5 @@ var (
 	ErrAlreadyExists      = errors.New("already exists")
 	ErrNoFieldsToUpdate   = errors.New("no fields to update")
 	ErrInvalidInput       = errors.New("invalid input")
+	ErrRecordNotFound     = errors.New("record not found")
 )

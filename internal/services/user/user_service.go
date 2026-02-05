@@ -105,24 +105,28 @@ func (s *ServiceImpl) UpdateOnboarding(ctx context.Context, userId string, dto c
 					return utils.ErrInternal
 				}
 			} else {
-				// Partner found, create couple and link both users
+				// Partner found, create couple that references both users
 				coupleName := dto.FirstName + " & " + partner.FirstName
 				if coupleName == "" {
 					coupleName = fmt.Sprintf("%s & %s", updatedUser.FirstName, partner.FirstName)
 				}
-				c := &couple.Couple{Name: coupleName}
+
+				// normalize order to avoid duplicate couples with reversed users
+				aID := userId
+				bID := partner.ID
+				if aID > bID {
+					aID, bID = bID, aID
+				}
+
+				c := &couple.Couple{
+					UserAID: &aID,
+					UserBID: &bID,
+					Name:    coupleName,
+				}
 				if err := s.coupleRepository.Save(txCtx, c); err != nil {
 					utils.Log.Errorf("error creating couple: %v", err)
 					return utils.ErrInternal
 				}
-
-				partner.CoupleID = &c.ID
-				if err := s.userRepository.Update(txCtx, partner.ID, partner); err != nil {
-					utils.Log.Errorf("error updating partner with couple id: %v", err)
-					return utils.ErrInternal
-				}
-
-				updatedUser.CoupleID = &c.ID
 			}
 		}
 
@@ -152,6 +156,65 @@ func (s *ServiceImpl) SearchPartnerByName(userID string, name string) (contract.
 	}
 
 	return contract.PartnersListDto{Partners: partners}, nil
+}
+
+func (s *ServiceImpl) GetCompleteUser(ctx context.Context, userID string) (*contract.UserDTO, error) {
+	var userFounded contract.UserDTO
+
+	err := s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		u, err := s.userRepository.FindByID(txCtx, userID)
+		if err != nil {
+			utils.Log.Errorf("error finding user by id: %v", err)
+			return utils.ErrInternal
+		}
+
+		if u == nil {
+			return utils.ErrRecordNotFound
+		}
+
+		userFounded = contract.UserDTO{
+			ID:        u.ID,
+			Email:     u.Email,
+			FirstName: &u.FirstName,
+			LastName:  &u.LastName,
+			Phone:     u.Phone,
+		}
+
+		c, err := s.coupleRepository.FindByUserID(ctx, userID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			utils.Log.Errorf("error finding couple by user id: %v", err)
+			return utils.ErrInternal
+		}
+		if c != nil {
+			var partnerID string
+			if c.UserAID != nil && *c.UserAID != userID {
+				partnerID = *c.UserAID
+			} else if c.UserBID != nil && *c.UserBID != userID {
+				partnerID = *c.UserBID
+			}
+
+			if partnerID != "" {
+				partner, err := s.userRepository.FindByID(txCtx, partnerID)
+				if err != nil {
+					utils.Log.Errorf("error finding partner by id: %v", err)
+					return utils.ErrInternal
+				}
+				userFounded.PartnerEmail = &partner.Email
+				userFounded.PartnerNameFirstName = &partner.FirstName
+				userFounded.PartnerNameLastName = &partner.LastName
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return &userFounded, nil
 }
 
 func hashPassword(password string) (string, error) {
