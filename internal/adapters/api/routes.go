@@ -10,6 +10,12 @@ func RegisterRoutes(registry *HandlerRegistry) *mux.Router {
 
 	router.HandleFunc("/health", registry.HealthHandler.Health).Methods("GET")
 
+	authRouter := router.PathPrefix("/api/v1/auth").Subrouter()
+	{
+		authRouter.HandleFunc("/signup", registry.AuthHandler.Signup).Methods("POST")
+		authRouter.HandleFunc("/login", registry.AuthHandler.Login).Methods("POST")
+	}
+
 	userRouter := router.PathPrefix("/api/v1/user").Subrouter()
 	{
 		userRouter.HandleFunc("/profile", registry.UserHandler.UpdateProfile).Methods("PUT")
@@ -18,10 +24,13 @@ func RegisterRoutes(registry *HandlerRegistry) *mux.Router {
 		userRouter.HandleFunc("/complete-user", registry.UserHandler.GetCompleteUser).Methods("GET")
 	}
 
-	authRouter := router.PathPrefix("/api/v1/auth").Subrouter()
+	goalRouter := router.PathPrefix("/api/v1/goals").Subrouter()
 	{
-		authRouter.HandleFunc("/signup", registry.AuthHandler.Signup).Methods("POST")
-		authRouter.HandleFunc("/login", registry.AuthHandler.Login).Methods("POST")
+		goalRouter.HandleFunc("/", registry.GoalHandler.CreateGoal).Methods("POST")
+		goalRouter.HandleFunc("/", registry.GoalHandler.GetGoals).Methods("GET")
+		goalRouter.HandleFunc("/widget", registry.GoalHandler.GetWidgetGoals).Methods("GET")
+		goalRouter.HandleFunc("/{goalID}", registry.GoalHandler.UpdateGoal).Methods("PUT")
+		goalRouter.HandleFunc("/{goalID}", registry.GoalHandler.DeleteGoal).Methods("DELETE")
 	}
 
 	// Middlewares here

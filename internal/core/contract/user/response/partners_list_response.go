@@ -1,6 +1,6 @@
-package contract
+package response
 
-type PartnersListDto struct {
+type PartnersListResponse struct {
 	Partners []Partner `json:"partners"`
 }
 

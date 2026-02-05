@@ -1,6 +1,6 @@
-package contract
+package response
 
-type UserDTO struct {
+type UserWithCoupleResponse struct {
 	ID                   string  `json:"id"`
 	Email                string  `json:"email"`
 	FirstName            *string `json:"FirstName,omitempty"`

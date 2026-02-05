@@ -1,6 +1,6 @@
-package contract
+package request
 
-type CreateNewUserDto struct {
+type CreateUserRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8"`
 }

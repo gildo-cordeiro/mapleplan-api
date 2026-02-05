@@ -1,4 +1,4 @@
-package auth
+package handlers
 
 import (
 	"encoding/json"
@@ -6,20 +6,20 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract/user/request"
 	servicePort "github.com/gildo-cordeiro/mapleplan-api/internal/core/ports/services"
 	jwtutil "github.com/gildo-cordeiro/mapleplan-api/pkg/jwt"
 	"github.com/gildo-cordeiro/mapleplan-api/pkg/utils"
 )
 
-type Handler struct {
+type AuthHandler struct {
 	UserService servicePort.UserService
 }
 
-func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var newUserDto contract.CreateNewUserDto
+	var newUserDto request.CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&newUserDto); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
@@ -57,10 +57,10 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var loginDto contract.LoginDto
+	var loginDto request.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&loginDto); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
@@ -97,7 +97,7 @@ type forgotPasswordDto struct {
 	Email string `json:"email"`
 }
 
-func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var dto forgotPasswordDto

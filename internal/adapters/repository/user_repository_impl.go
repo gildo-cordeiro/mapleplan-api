@@ -1,4 +1,4 @@
-package user
+package repository
 
 import (
 	"context"
@@ -12,15 +12,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type RepositoryImpl struct {
+type UserRepositoryImpl struct {
 	db *gorm.DB
 }
 
 func NewGormUserRepository(db *gorm.DB) repositories.UserRepository {
-	return &RepositoryImpl{db: db}
+	return &UserRepositoryImpl{db: db}
 }
 
-func (r *RepositoryImpl) getDB(ctx context.Context) *gorm.DB {
+func (r *UserRepositoryImpl) getDB(ctx context.Context) *gorm.DB {
 	if ctx == nil {
 		return r.db
 	}
@@ -30,7 +30,7 @@ func (r *RepositoryImpl) getDB(ctx context.Context) *gorm.DB {
 	return r.db.WithContext(ctx)
 }
 
-func (r *RepositoryImpl) Save(user *user.User) (string, error) {
+func (r *UserRepositoryImpl) Save(user *user.User) (string, error) {
 	if err := r.db.Create(user).Error; err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
@@ -45,7 +45,7 @@ func (r *RepositoryImpl) Save(user *user.User) (string, error) {
 	return user.ID, nil
 }
 
-func (r *RepositoryImpl) FindByEmail(ctx context.Context, email string) (*user.User, error) {
+func (r *UserRepositoryImpl) FindByEmail(ctx context.Context, email string) (*user.User, error) {
 	var u user.User
 	err := r.getDB(ctx).Where("email = ?", email).First(&u).Error
 	if err != nil {
@@ -54,7 +54,7 @@ func (r *RepositoryImpl) FindByEmail(ctx context.Context, email string) (*user.U
 	return &u, nil
 }
 
-func (r *RepositoryImpl) FindByID(ctx context.Context, id string) (*user.User, error) {
+func (r *UserRepositoryImpl) FindByID(ctx context.Context, id string) (*user.User, error) {
 	var u user.User
 	err := r.getDB(ctx).Where("id = ?", id).First(&u).Error
 	if err != nil {
@@ -63,14 +63,14 @@ func (r *RepositoryImpl) FindByID(ctx context.Context, id string) (*user.User, e
 	return &u, nil
 }
 
-func (r *RepositoryImpl) Update(ctx context.Context, id string, u *user.User) error {
+func (r *UserRepositoryImpl) Update(ctx context.Context, id string, u *user.User) error {
 	if err := r.getDB(ctx).Where("id = ?", id).Updates(u).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *RepositoryImpl) SearchByName(userId string, name string) ([]*user.User, error) {
+func (r *UserRepositoryImpl) SearchByName(userId string, name string) ([]*user.User, error) {
 	var users []user.User
 	pattern := "%" + strings.ToLower(name) + "%"
 	err := r.db.Where("LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ? AND id != ?", pattern, pattern, userId).Find(&users).Error

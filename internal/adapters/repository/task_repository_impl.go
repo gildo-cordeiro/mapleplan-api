@@ -1,4 +1,4 @@
-package task
+package repository
 
 import (
 	taskDomain "github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/task"
@@ -6,20 +6,20 @@ import (
 	"gorm.io/gorm"
 )
 
-type RepositoryImpl struct {
+type TaskRepositoryImpl struct {
 	db *gorm.DB
 }
 
-func (g RepositoryImpl) FindById(id uint) (*taskDomain.Task, error) {
+func (g TaskRepositoryImpl) FindById(id uint) (*taskDomain.Task, error) {
 	// TODO: implement repository logic
 	return nil, nil
 }
 
-func (g RepositoryImpl) Save(t *taskDomain.Task) (string, error) {
+func (g TaskRepositoryImpl) Save(t *taskDomain.Task) (string, error) {
 	// TODO: implement repository logic
 	return "", nil
 }
 
 func NewGormTaskRepository(db *gorm.DB) repoPort.TaskRepository {
-	return &RepositoryImpl{db: db}
+	return &TaskRepositoryImpl{db: db}
 }

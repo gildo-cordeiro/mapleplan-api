@@ -16,9 +16,12 @@ type Goal struct {
 	CoupleID *string `gorm:"type:uuid;index" json:"coupleId,omitempty"`
 
 	Name          string          `gorm:"type:varchar(100);not null" json:"name"`
+	Status        string          `gorm:"type:varchar(20);not null" json:"status"`
+	Progress      int             `gorm:"type:integer;not null" json:"progress"`
 	TargetAmount  decimal.Decimal `gorm:"type:numeric(10,2);not null" json:"targetAmount"`
 	CurrentAmount decimal.Decimal `gorm:"type:numeric(10,2);not null" json:"currentAmount"`
-	DueDate       time.Time       `json:"dueDate"`
+	DueDate       time.Time       `json:"type:date" json:"dueDate"`
+	Description   *string         `gorm:"type:text" json:"description,omitempty"`
 
 	User   *user.User     `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"user,omitempty"`
 	Couple *couple.Couple `gorm:"foreignKey:CoupleID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"couple,omitempty"`

@@ -1,4 +1,4 @@
-package couple
+package repository
 
 import (
 	"context"
@@ -8,11 +8,11 @@ import (
 	"gorm.io/gorm"
 )
 
-type RepositoryImpl struct {
+type CoupleRepositoryImpl struct {
 	db *gorm.DB
 }
 
-func (r *RepositoryImpl) getDB(ctx context.Context) *gorm.DB {
+func (r *CoupleRepositoryImpl) getDB(ctx context.Context) *gorm.DB {
 	if ctx == nil {
 		return r.db
 	}
@@ -23,17 +23,17 @@ func (r *RepositoryImpl) getDB(ctx context.Context) *gorm.DB {
 }
 
 func NewGormCoupleRepository(db *gorm.DB) couplePort.CoupleRepository {
-	return &RepositoryImpl{db: db}
+	return &CoupleRepositoryImpl{db: db}
 }
 
-func (r *RepositoryImpl) Save(ctx context.Context, c *couple.Couple) error {
+func (r *CoupleRepositoryImpl) Save(ctx context.Context, c *couple.Couple) error {
 	if err := r.getDB(ctx).Create(c).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *RepositoryImpl) FindByID(id string) (*couple.Couple, error) {
+func (r *CoupleRepositoryImpl) FindByID(id string) (*couple.Couple, error) {
 	var c couple.Couple
 	err := r.db.Where("id = ?", id).First(&c).Error
 	if err != nil {
@@ -41,7 +41,7 @@ func (r *RepositoryImpl) FindByID(id string) (*couple.Couple, error) {
 	}
 	return &c, nil
 }
-func (r *RepositoryImpl) FindByUserID(ctx context.Context, userID string) (*couple.Couple, error) {
+func (r *CoupleRepositoryImpl) FindByUserID(ctx context.Context, userID string) (*couple.Couple, error) {
 	var c couple.Couple
 	err := r.getDB(ctx).Where("user_a_id = ? OR user_b_id = ?", userID, userID).First(&c).Error
 	if err != nil {

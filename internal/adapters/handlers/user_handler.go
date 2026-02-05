@@ -1,23 +1,23 @@
-package user
+package handlers
 
 import (
 	"encoding/json"
 	"net/http"
 
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/middleware"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract"
-	servicePort "github.com/gildo-cordeiro/mapleplan-api/internal/core/ports/services"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract/user/request"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/ports/services"
 )
 
-type Handler struct {
-	UserService servicePort.UserService
+type UserHandler struct {
+	UserService services.UserService
 }
 
-func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	// Implementation for updating user profile goes here
 }
 
-func (h *Handler) UpdateOnboarding(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) UpdateOnboarding(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	userID, ok := middleware.GetUserIDFromContext(r)
@@ -26,7 +26,7 @@ func (h *Handler) UpdateOnboarding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var onboardingDto contract.UpdateUserOnboardingDto
+	var onboardingDto request.UpdateUserOnboardingRequest
 	if err := json.NewDecoder(r.Body).Decode(&onboardingDto); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
@@ -43,7 +43,7 @@ func (h *Handler) UpdateOnboarding(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "onboarding updated successfully"})
 }
 
-func (h *Handler) SearchPartner(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) SearchPartner(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	userID, ok := middleware.GetUserIDFromContext(r)
 	if !ok {
@@ -69,7 +69,7 @@ func (h *Handler) SearchPartner(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
-func (h *Handler) GetCompleteUser(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetCompleteUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	userID, ok := middleware.GetUserIDFromContext(r)

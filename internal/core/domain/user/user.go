@@ -1,7 +1,7 @@
 package user
 
 import (
-	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract/user/request"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain"
 	"github.com/gildo-cordeiro/mapleplan-api/pkg/utils"
 )
@@ -25,14 +25,14 @@ func NewUser(email, passwordHash, firstName, lastName string) (*User, error) {
 	}, nil
 }
 
-func NewFromCreateDTO(dto contract.CreateNewUserDto, passwordHash string) (*User, error) {
-	if dto == (contract.CreateNewUserDto{}) {
+func NewFromCreateDTO(dto request.CreateUserRequest, passwordHash string) (*User, error) {
+	if dto == (request.CreateUserRequest{}) {
 		return nil, utils.ErrInvalidInput
 	}
 	return NewUser(dto.Email, passwordHash, "", "")
 }
 
-func NewFromUpdateOnboardingDTO(dto contract.UpdateUserOnboardingDto, user *User) (*User, error) {
+func NewFromUpdateOnboardingDTO(dto request.UpdateUserOnboardingRequest, user *User) (*User, error) {
 	if dto.FirstName == "" && dto.LastName == "" {
 		return nil, utils.ErrNoFieldsToUpdate
 	}

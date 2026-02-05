@@ -1,11 +1,12 @@
-package user
+package services
 
 import (
 	"context"
 	"errors"
 	"fmt"
 
-	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract/user/request"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract/user/response"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/couple"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/user"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/ports"
@@ -16,17 +17,17 @@ import (
 	"gorm.io/gorm"
 )
 
-type ServiceImpl struct {
+type UserServiceImpl struct {
 	userRepository   repositories.UserRepository
 	coupleRepository repositories.CoupleRepository
 	txManager        ports.TransactionManager
 }
 
 func NewUserService(r repositories.UserRepository, c repositories.CoupleRepository, txManager ports.TransactionManager) services.UserService {
-	return &ServiceImpl{userRepository: r, coupleRepository: c, txManager: txManager}
+	return &UserServiceImpl{userRepository: r, coupleRepository: c, txManager: txManager}
 }
 
-func (s *ServiceImpl) FindByEmailAndPass(email, pass string) (*user.User, error) {
+func (s *UserServiceImpl) FindByEmailAndPass(email, pass string) (*user.User, error) {
 	var found *user.User
 
 	err := s.txManager.WithTransaction(context.Background(), func(txCtx context.Context) error {
@@ -51,7 +52,7 @@ func (s *ServiceImpl) FindByEmailAndPass(email, pass string) (*user.User, error)
 	return found, nil
 }
 
-func (s *ServiceImpl) RegisterUser(newUser contract.CreateNewUserDto) (string, error) {
+func (s *UserServiceImpl) RegisterUser(newUser request.CreateUserRequest) (string, error) {
 	if email := newUser.Email; email != "" {
 		utils.Log.Infof("RegisterUser started for email=%s", email)
 	} else {
@@ -81,7 +82,7 @@ func (s *ServiceImpl) RegisterUser(newUser contract.CreateNewUserDto) (string, e
 	return id, nil
 }
 
-func (s *ServiceImpl) UpdateOnboarding(ctx context.Context, userId string, dto contract.UpdateUserOnboardingDto) error {
+func (s *UserServiceImpl) UpdateOnboarding(ctx context.Context, userId string, dto request.UpdateUserOnboardingRequest) error {
 	return s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		userFounded, err := s.userRepository.FindByID(txCtx, userId)
 		if err != nil {
@@ -139,27 +140,27 @@ func (s *ServiceImpl) UpdateOnboarding(ctx context.Context, userId string, dto c
 	})
 }
 
-func (s *ServiceImpl) SearchPartnerByName(userID string, name string) (contract.PartnersListDto, error) {
+func (s *UserServiceImpl) SearchPartnerByName(userID string, name string) (response.PartnersListResponse, error) {
 	users, err := s.userRepository.SearchByName(userID, name)
 	if err != nil {
 		utils.Log.Errorf("error searching users by name: %v", err)
-		return contract.PartnersListDto{}, utils.ErrInternal
+		return response.PartnersListResponse{}, utils.ErrInternal
 	}
 
-	partners := make([]contract.Partner, 0, len(users))
+	partners := make([]response.Partner, 0, len(users))
 	for _, u := range users {
-		p := contract.Partner{
+		p := response.Partner{
 			Name:  u.FirstName + " " + u.LastName,
 			Email: u.Email,
 		}
 		partners = append(partners, p)
 	}
 
-	return contract.PartnersListDto{Partners: partners}, nil
+	return response.PartnersListResponse{Partners: partners}, nil
 }
 
-func (s *ServiceImpl) GetCompleteUser(ctx context.Context, userID string) (*contract.UserDTO, error) {
-	var userFounded contract.UserDTO
+func (s *UserServiceImpl) GetCompleteUser(ctx context.Context, userID string) (*response.UserWithCoupleResponse, error) {
+	var userFounded response.UserWithCoupleResponse
 
 	err := s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		u, err := s.userRepository.FindByID(txCtx, userID)
@@ -172,7 +173,7 @@ func (s *ServiceImpl) GetCompleteUser(ctx context.Context, userID string) (*cont
 			return utils.ErrRecordNotFound
 		}
 
-		userFounded = contract.UserDTO{
+		userFounded = response.UserWithCoupleResponse{
 			ID:        u.ID,
 			Email:     u.Email,
 			FirstName: &u.FirstName,

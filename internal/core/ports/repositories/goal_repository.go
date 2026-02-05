@@ -1,0 +1,14 @@
+package repositories
+
+import (
+	"context"
+
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/goal"
+)
+
+type GoalRepository interface {
+	FindByID(ctx context.Context, id string) (*goal.Goal, error)
+	Save(ctx context.Context, goal *goal.Goal) (string, error)
+	Update(ctx context.Context, id string, goal *goal.Goal) error
+	Delete(ctx context.Context, id string) error
+}

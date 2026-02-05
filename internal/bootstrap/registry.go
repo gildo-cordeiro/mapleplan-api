@@ -4,12 +4,8 @@ import (
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/api"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/database"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/handlers"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/handlers/auth"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/handlers/user"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/repository"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/repository/couple"
-	usersRepo "github.com/gildo-cordeiro/mapleplan-api/internal/adapters/repository/user"
-	userServicePkg "github.com/gildo-cordeiro/mapleplan-api/internal/services/user"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/services"
 )
 
 func Build() (*api.HandlerRegistry, error) {
@@ -18,15 +14,18 @@ func Build() (*api.HandlerRegistry, error) {
 		return nil, err
 	}
 
-	coupRepo := couple.NewGormCoupleRepository(db)
-	userRepo := usersRepo.NewGormUserRepository(db)
+	coupRepo := repository.NewGormCoupleRepository(db)
+	userRepo := repository.NewGormUserRepository(db)
+	goalRepo := repository.NewGormGoalRepository(db)
 	txtManager := repository.NewGormTransactionManager(db)
 
-	userService := userServicePkg.NewUserService(userRepo, coupRepo, txtManager)
+	userService := services.NewUserService(userRepo, coupRepo, txtManager)
+	goalService := services.NewGoalService(goalRepo, txtManager)
 
 	health := handlers.HealthCheck{}
-	userHandler := user.Handler{UserService: userService}
-	authHandler := auth.Handler{UserService: userService}
+	userHandler := handlers.UserHandler{UserService: userService}
+	goalHandler := handlers.GoalHandler{GoalService: goalService}
+	authHandler := handlers.AuthHandler{UserService: userService}
 
-	return &api.HandlerRegistry{HealthHandler: health, UserHandler: userHandler, AuthHandler: authHandler}, nil
+	return &api.HandlerRegistry{HealthHandler: health, UserHandler: userHandler, GoalHandler: goalHandler, AuthHandler: authHandler}, nil
 }

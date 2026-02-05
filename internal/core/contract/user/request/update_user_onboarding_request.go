@@ -1,6 +1,6 @@
-package contract
+package request
 
-type UpdateUserOnboardingDto struct {
+type UpdateUserOnboardingRequest struct {
 	FirstName       string `json:"firstName" binding:"required"`
 	LastName        string `json:"lastName" binding:"required"`
 	ImmigrationGoal string `json:"immigrationGoal" binding:"required"`
