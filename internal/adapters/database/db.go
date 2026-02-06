@@ -13,7 +13,6 @@ import (
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/user"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 func NewGormDB() (*gorm.DB, error) {
@@ -22,9 +21,7 @@ func NewGormDB() (*gorm.DB, error) {
 		return nil, fmt.Errorf("DATABASE_DSN not set; check the .env file or environment variables")
 	}
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
-	})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("fatal error connecting to PostgreSQL: %w", err)
 	}

@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/middleware"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/ports/services"
@@ -21,11 +22,12 @@ func (h *GoalHandler) GetWidgetGoals(w http.ResponseWriter, r *http.Request) {
 	}
 
 	limit := r.URL.Query().Get("limit")
-	if limit == "" {
-		limit = "3" // default limit
+	intLimit, err := strconv.Atoi(limit)
+	if err != nil {
+		intLimit = 3
 	}
 
-	results, err := h.GoalService.GetWidgetGoals(userID, limit)
+	results, err := h.GoalService.GetWidgetGoals(r.Context(), userID, intLimit)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
@@ -33,6 +35,10 @@ func (h *GoalHandler) GetWidgetGoals(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+	if len(results) == 0 {
+		json.NewEncoder(w).Encode([]interface{}{})
+		return
+	}
 	json.NewEncoder(w).Encode(results)
 }
 
