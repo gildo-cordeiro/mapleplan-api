@@ -13,11 +13,14 @@ func ToWidgetGoalResponse(g *goal.Goal) response.WidgetGoalResponse {
 	return response.WidgetGoalResponse{
 		ID:            g.ID,
 		Title:         g.Name,
-		Status:        g.Status,
+		Status:        goal.StatusToString(g.Status),
 		DueDate:       formatDate(g.DueDate),
 		Progress:      g.Progress,
 		TargetAmount:  decimalToFloat64(g.TargetAmount),
 		CurrentAmount: decimalToFloat64(g.CurrentAmount),
+		Phase:         goal.PhaseToString(g.Phase),
+		Priority:      goal.PriorityToString(g.Priority),
+		AssignedTo:    getCorrectAssignedUserID(g),
 		Description:   g.Description,
 	}
 }
@@ -38,4 +41,14 @@ func formatDate(date time.Time) string {
 		return ""
 	}
 	return date.Format(time.RFC3339)
+}
+
+func getCorrectAssignedUserID(g *goal.Goal) string {
+	if g.CoupleID != nil {
+		return g.Couple.Name
+	}
+	if g.UserId != nil {
+		return g.User.FirstName
+	}
+	return ""
 }

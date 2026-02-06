@@ -4,9 +4,12 @@ type WidgetGoalResponse struct {
 	ID            string  `json:"id"`
 	Title         string  `json:"title"`
 	Status        string  `json:"status"`
-	DueDate       string  `json:"due_date"`
+	DueDate       string  `json:"dueDate"`
 	Progress      int     `json:"progress"`
-	TargetAmount  float64 `json:"target_amount"`
-	CurrentAmount float64 `json:"current_amount"`
+	Phase         string  `json:"phase"`
+	Priority      string  `json:"priority"`
+	AssignedTo    string  `json:"assignedTo,omitempty"`
+	TargetAmount  float64 `json:"targetAmount"`
+	CurrentAmount float64 `json:"currentAmount"`
 	Description   *string `json:"description,omitempty"`
 }

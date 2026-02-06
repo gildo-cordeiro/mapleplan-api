@@ -28,9 +28,24 @@ func NewGormGoalRepository(db *gorm.DB) repositories.GoalRepository {
 
 func (g *GoalRepositoryImpl) FindWidgetGoals(ctx context.Context, userID string, limit int) ([]*goal.Goal, error) {
 	var goals []*goal.Goal
-	err := g.getDB(ctx).
+	db := g.getDB(ctx)
+
+	err := db.
 		Joins("JOIN couples ON goals.couple_id = couples.id").
 		Where("couples.user_a_id = ? OR couples.user_b_id = ?", userID, userID).
+		Order("goals.created_at DESC").
+		Limit(limit).
+		Find(&goals).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(goals) > 0 {
+		return goals, nil
+	}
+
+	goals = nil
+	err = db.
+		Where("goals.user_id = ?", userID).
 		Order("goals.created_at DESC").
 		Limit(limit).
 		Find(&goals).Error
