@@ -6,6 +6,7 @@ import (
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract/goal/mapper"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract/goal/request"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract/goal/response"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/domain/goal"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/ports"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/ports/repositories"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/ports/services"
@@ -43,6 +44,29 @@ func (g *GoalServiceImpl) GetWidgetGoals(ctx context.Context, userID string, lim
 		return nil, err
 	}
 	return goals, nil
+}
+
+func (g *GoalServiceImpl) GetStatusCounts(ctx context.Context, userID string) (response.GoalStatusCountResponse, error) {
+	var countResponse response.GoalStatusCountResponse
+
+	err := g.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		counts, err := g.GoalRepository.CountGoalsByStatus(txCtx, userID)
+		if err != nil {
+			return err
+		}
+		countResponse = response.GoalStatusCountResponse{
+			NotStarted: counts[goal.NotStartedStatus],
+			InProgress: counts[goal.InProgressStatus],
+			Completed:  counts[goal.CompletedStatus],
+			Total:      counts[goal.NotStartedStatus] + counts[goal.InProgressStatus] + counts[goal.CompletedStatus],
+		}
+		return nil
+	})
+
+	if err != nil {
+		return response.GoalStatusCountResponse{}, err
+	}
+	return countResponse, nil
 }
 
 func (g *GoalServiceImpl) CreateGoal(userID string, req request.CreateGoalRequest) (string, error) {

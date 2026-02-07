@@ -3,15 +3,15 @@ package goal
 type Status string
 
 const (
-	StatusPending    Status = "pending"
-	StatusInProgress Status = "in_progress"
-	StatusCompleted  Status = "completed"
+	NotStartedStatus Status = "not_started"
+	InProgressStatus Status = "in_progress"
+	CompletedStatus  Status = "completed"
 	UnknownStatus    Status = "unknown"
 )
 
 func IsValidStatus(status Status) bool {
 	switch status {
-	case StatusPending, StatusInProgress, StatusCompleted:
+	case NotStartedStatus, InProgressStatus, CompletedStatus:
 		return true
 	default:
 		return false
@@ -19,7 +19,7 @@ func IsValidStatus(status Status) bool {
 }
 
 func GetAllStatuses() []Status {
-	return []Status{StatusPending, StatusInProgress, StatusCompleted}
+	return []Status{NotStartedStatus, InProgressStatus, CompletedStatus}
 }
 
 func StatusToString(status Status) string {

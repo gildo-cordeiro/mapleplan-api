@@ -55,6 +55,47 @@ func (g *GoalRepositoryImpl) FindWidgetGoals(ctx context.Context, userID string,
 	return goals, nil
 }
 
+func (g *GoalRepositoryImpl) CountGoalsByStatus(ctx context.Context, userID string) (map[goal.Status]int, error) {
+	type Result struct {
+		Status goal.Status
+		Count  int
+	}
+	var results []Result
+	db := g.getDB(ctx)
+
+	err := db.
+		Table("goals").
+		Select("status, COUNT(*) as count").
+		Joins("JOIN couples ON goals.couple_id = couples.id").
+		Where("couples.user_a_id = ? OR couples.user_b_id = ?", userID, userID).
+		Group("status").
+		Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+
+	resultList := make(map[goal.Status]int, len(results))
+	if len(resultList) == 0 {
+		return resultList, nil
+	}
+
+	err = db.
+		Table("goals").
+		Select("status, COUNT(*) as count").
+		Where("goals.user_id = ?", userID).
+		Group("status").
+		Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, result := range results {
+		resultList[result.Status] = result.Count
+	}
+
+	return resultList, nil
+}
+
 func (g *GoalRepositoryImpl) FindByID(ctx context.Context, id string) (*goal.Goal, error) {
 	//TODO implement me
 	panic("implement me")

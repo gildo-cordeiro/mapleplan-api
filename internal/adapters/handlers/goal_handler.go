@@ -42,6 +42,25 @@ func (h *GoalHandler) GetWidgetGoals(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
+func (h *GoalHandler) GetStatusCounts(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	userID, ok := middleware.GetUserIDFromContext(r)
+	if !ok {
+		http.Error(w, "Unauthorized: missing user id", http.StatusUnauthorized)
+		return
+	}
+
+	results, err := h.GoalService.GetStatusCounts(r.Context(), userID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(results)
+}
+
 func (h *GoalHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {}
 
 func (h *GoalHandler) GetGoals(w http.ResponseWriter, r *http.Request) {}
