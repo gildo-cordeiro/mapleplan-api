@@ -33,9 +33,9 @@ func (r *CoupleRepositoryImpl) Save(ctx context.Context, c *couple.Couple) error
 	return nil
 }
 
-func (r *CoupleRepositoryImpl) FindByID(id string) (*couple.Couple, error) {
+func (r *CoupleRepositoryImpl) FindByID(ctx context.Context, id string) (*couple.Couple, error) {
 	var c couple.Couple
-	err := r.db.Where("id = ?", id).First(&c).Error
+	err := r.getDB(ctx).Where("id = ?", id).First(&c).Error
 	if err != nil {
 		return nil, err
 	}

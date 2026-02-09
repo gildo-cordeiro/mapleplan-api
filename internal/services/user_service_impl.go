@@ -206,6 +206,8 @@ func (s *UserServiceImpl) GetCompleteUser(ctx context.Context, userID string) (*
 				userFounded.PartnerEmail = &partner.Email
 				userFounded.PartnerFirstName = &partner.FirstName
 				userFounded.PartnerLastName = &partner.LastName
+				userFounded.CoupleID = &c.ID
+				userFounded.PartnerId = &partnerID
 			}
 		}
 

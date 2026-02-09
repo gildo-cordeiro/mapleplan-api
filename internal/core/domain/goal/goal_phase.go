@@ -3,9 +3,9 @@ package goal
 type Phase string
 
 const (
-	PreDeparture Phase = "pre_departure"
+	PreDeparture Phase = "pre-departure"
 	Arrival      Phase = "arrival"
-	PostArrival  Phase = "post_arrival"
+	PostArrival  Phase = "post-arrival"
 	UnknownPhase Phase = "unknown"
 )
 

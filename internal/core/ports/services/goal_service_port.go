@@ -9,8 +9,8 @@ import (
 
 type GoalService interface {
 	GetWidgetGoals(ctx context.Context, userID string, limit int) ([]response.WidgetGoalResponse, error)
-	CreateGoal(userID string, req request.CreateGoalRequest) (string, error)
-	GetGoals(userID string) ([]response.GoalResponse, error)
+	CreateGoal(ctx context.Context, req request.CreateGoalRequest) error
+	GetGoals(ctx context.Context, userID string) ([]response.GoalResponse, error)
 	GetStatusCounts(ctx context.Context, userID string) (response.GoalStatusCountResponse, error)
 	UpdateGoal(userID string, goalID string, req request.UpdateGoalRequest) error
 	DeleteGoal(userID string, goalID string) error

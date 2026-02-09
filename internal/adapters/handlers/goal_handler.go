@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/middleware"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/core/contract/goal/request"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/core/ports/services"
 )
 
@@ -61,9 +62,47 @@ func (h *GoalHandler) GetStatusCounts(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
-func (h *GoalHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {}
+func (h *GoalHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
-func (h *GoalHandler) GetGoals(w http.ResponseWriter, r *http.Request) {}
+	NewGoalDto := request.CreateGoalRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&NewGoalDto); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
+		return
+	}
+
+	err := h.GoalService.CreateGoal(r.Context(), NewGoalDto)
+	if err != nil {
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Goal created successfully"})
+}
+
+func (h *GoalHandler) GetGoals(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	userID, ok := middleware.GetUserIDFromContext(r)
+	if !ok {
+		http.Error(w, "Unauthorized: missing user id", http.StatusUnauthorized)
+		return
+	}
+
+	results, err := h.GoalService.GetGoals(r.Context(), userID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if len(results) == 0 {
+		json.NewEncoder(w).Encode([]interface{}{})
+		return
+	}
+	json.NewEncoder(w).Encode(results)
+}
 
 func (h *GoalHandler) UpdateGoal(w http.ResponseWriter, r *http.Request) {}
 

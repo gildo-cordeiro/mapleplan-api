@@ -3,8 +3,8 @@ package goal
 type Status string
 
 const (
-	NotStartedStatus Status = "not_started"
-	InProgressStatus Status = "in_progress"
+	NotStartedStatus Status = "not-started"
+	InProgressStatus Status = "in-progress"
 	CompletedStatus  Status = "completed"
 	UnknownStatus    Status = "unknown"
 )

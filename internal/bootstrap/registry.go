@@ -17,10 +17,11 @@ func Build() (*api.HandlerRegistry, error) {
 	coupRepo := repository.NewGormCoupleRepository(db)
 	userRepo := repository.NewGormUserRepository(db)
 	goalRepo := repository.NewGormGoalRepository(db)
+	coupleRepo := repository.NewGormCoupleRepository(db)
 	txtManager := repository.NewGormTransactionManager(db)
 
 	userService := services.NewUserService(userRepo, coupRepo, txtManager)
-	goalService := services.NewGoalService(userRepo, goalRepo, txtManager)
+	goalService := services.NewGoalService(userRepo, goalRepo, coupleRepo, txtManager)
 
 	health := handlers.HealthCheck{}
 	userHandler := handlers.UserHandler{UserService: userService}
