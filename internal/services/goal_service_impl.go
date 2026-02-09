@@ -118,6 +118,16 @@ func (g *GoalServiceImpl) GetGoals(ctx context.Context, userID string) ([]respon
 	return goals, nil
 }
 
+func (g *GoalServiceImpl) UpdateStatus(ctx context.Context, goalID string, status string) error {
+	return g.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		parsedStatus, ok := goal.StringToStatus(status)
+		if !ok {
+			return utils.ErrInvalidGoalStatus
+		}
+		return g.GoalRepository.UpdateStatus(txCtx, goalID, parsedStatus)
+	})
+}
+
 func (g *GoalServiceImpl) UpdateGoal(userID string, goalID string, req request.UpdateGoalRequest) error {
 	//TODO implement me
 	panic("implement me")

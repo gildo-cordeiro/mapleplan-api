@@ -30,6 +30,7 @@ func RegisterRoutes(registry *HandlerRegistry) *mux.Router {
 		goalRouter.HandleFunc("/", registry.GoalHandler.GetGoals).Methods("GET")
 		goalRouter.HandleFunc("/widget", registry.GoalHandler.GetWidgetGoals).Methods("GET")
 		goalRouter.HandleFunc("/status-counts", registry.GoalHandler.GetStatusCounts).Methods("GET")
+		goalRouter.HandleFunc("/{goalID}/status", registry.GoalHandler.UpdateStatus).Methods("PATCH")
 		goalRouter.HandleFunc("/{goalID}", registry.GoalHandler.UpdateGoal).Methods("PUT")
 		goalRouter.HandleFunc("/{goalID}", registry.GoalHandler.DeleteGoal).Methods("DELETE")
 	}

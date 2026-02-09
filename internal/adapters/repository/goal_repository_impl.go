@@ -82,8 +82,12 @@ func (g *GoalRepositoryImpl) CountGoalsByStatus(ctx context.Context, userID stri
 }
 
 func (g *GoalRepositoryImpl) FindByID(ctx context.Context, id string) (*goal.Goal, error) {
-	//TODO implement me
-	panic("implement me")
+	var foundedGoal goal.Goal
+	err := g.getDB(ctx).First(&foundedGoal, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &foundedGoal, nil
 }
 
 func (g *GoalRepositoryImpl) Save(ctx context.Context, goal *goal.Goal) error {
@@ -107,6 +111,15 @@ func (g *GoalRepositoryImpl) FindGoals(ctx context.Context, userID string) ([]*g
 		return nil, err
 	}
 	return goals, nil
+}
+
+func (g *GoalRepositoryImpl) UpdateStatus(ctx context.Context, id string, status goal.Status) error {
+	foundedGoal, err := g.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	foundedGoal.Status = status
+	return g.getDB(ctx).Save(foundedGoal).Error
 }
 
 func (g *GoalRepositoryImpl) Update(ctx context.Context, id string, goal *goal.Goal) error {
