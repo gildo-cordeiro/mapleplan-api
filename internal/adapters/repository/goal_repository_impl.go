@@ -114,12 +114,7 @@ func (g *GoalRepositoryImpl) FindGoals(ctx context.Context, userID string) ([]*g
 }
 
 func (g *GoalRepositoryImpl) UpdateStatus(ctx context.Context, id string, status goal.Status) error {
-	foundedGoal, err := g.FindByID(ctx, id)
-	if err != nil {
-		return err
-	}
-	foundedGoal.Status = status
-	return g.getDB(ctx).Save(foundedGoal).Error
+	return g.getDB(ctx).Model(&goal.Goal{}).Where("id = ?", id).Update("status", status).Error
 }
 
 func (g *GoalRepositoryImpl) Update(ctx context.Context, id string, goal *goal.Goal) error {
