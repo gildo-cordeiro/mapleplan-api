@@ -72,21 +72,40 @@ func (g *GoalServiceImpl) GetStatusCounts(ctx context.Context, userID string) (r
 	return countResponse, nil
 }
 
-func (g *GoalServiceImpl) CreateGoal(ctx context.Context, req request.CreateGoalRequest) error {
-	goalToSave := mapper.ToGoalDomain(&req)
+func (g *GoalServiceImpl) GetGoalByID(ctx context.Context, goalID string) (response.GoalResponse, error) {
+	var goalResponse response.GoalResponse
+
 	err := g.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		if req.AssignedToUser != nil {
+		foundGoal, err := g.GoalRepository.FindByID(txCtx, goalID)
+		if err != nil {
+			return utils.ErrRecordNotFound
+		}
+
+		goalResponse = mapper.ToGoalUpdateResponse(foundGoal)
+		return nil
+	})
+
+	if err != nil {
+		return goalResponse, err
+	}
+	return goalResponse, nil
+}
+
+func (g *GoalServiceImpl) CreateGoal(ctx context.Context, req request.CreateGoalRequest) error {
+	goalToSave := mapper.CreateGoalRequestToGoalDomain(&req)
+	err := g.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		if req.AssignedToUser != nil && *req.AssignedToUser != "" {
 			user, err := g.UserRepository.FindByID(txCtx, *req.AssignedToUser)
 			if err != nil {
 				return err
 			}
 			goalToSave.UserId = &user.ID
-		} else if req.AssignedToCouple != nil {
-			couple, err := g.Couple.FindByID(txCtx, *req.AssignedToCouple)
+		} else if req.AssignedToCouple != nil && *req.AssignedToCouple != "" {
+			c, err := g.Couple.FindByID(txCtx, *req.AssignedToCouple)
 			if err != nil {
 				return err
 			}
-			goalToSave.CoupleID = &couple.ID
+			goalToSave.CoupleID = &c.ID
 		} else {
 			return utils.ErrInvalidGoalAssignment
 		}
@@ -128,9 +147,31 @@ func (g *GoalServiceImpl) UpdateStatus(ctx context.Context, goalID string, statu
 	})
 }
 
-func (g *GoalServiceImpl) UpdateGoal(userID string, goalID string, req request.UpdateGoalRequest) error {
-	//TODO implement me
-	panic("implement me")
+func (g *GoalServiceImpl) UpdateGoal(ctx context.Context, goalID string, req request.UpdateGoalRequestBody) error {
+	return g.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		goalToUpdate := mapper.UpdateGoalRequestToGoalDomain(&req)
+		if goalToUpdate == nil {
+			return utils.ErrInvalidParse
+		}
+
+		if req.AssignedToUser != "" {
+			user, err := g.UserRepository.FindByID(txCtx, req.AssignedToUser)
+			if err != nil {
+				return err
+			}
+			goalToUpdate.UserId = &user.ID
+			goalToUpdate.CoupleID = nil
+		} else if req.AssignedToCouple != "" {
+			c, err := g.Couple.FindByID(txCtx, req.AssignedToCouple)
+			if err != nil {
+				return err
+			}
+			goalToUpdate.CoupleID = &c.ID
+			goalToUpdate.UserId = nil
+		}
+
+		return g.GoalRepository.Update(txCtx, goalID, goalToUpdate)
+	})
 }
 
 func (g *GoalServiceImpl) DeleteGoal(userID string, goalID string) error {

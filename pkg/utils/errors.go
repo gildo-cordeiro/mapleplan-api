@@ -11,4 +11,5 @@ var (
 	ErrRecordNotFound        = errors.New("record not found")
 	ErrInvalidGoalAssignment = errors.New("invalid goal assignment")
 	ErrInvalidGoalStatus     = errors.New("invalid goal status")
+	ErrInvalidParse          = errors.New("invalid parse")
 )

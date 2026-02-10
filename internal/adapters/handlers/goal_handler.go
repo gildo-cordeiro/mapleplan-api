@@ -106,6 +106,23 @@ func (h *GoalHandler) GetGoals(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
+func (h *GoalHandler) GetGoalByID(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+	goalID := vars["goalID"]
+
+	result, err := h.GoalService.GetGoalByID(r.Context(), goalID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
+}
+
 func (h *GoalHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -131,6 +148,30 @@ func (h *GoalHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Goal status updated successfully"})
 }
 
-func (h *GoalHandler) UpdateGoal(w http.ResponseWriter, r *http.Request) {}
+func (h *GoalHandler) UpdateGoal(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+	goalID := vars["goalID"]
+	var body request.UpdateGoalRequestBody
+
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
+		return
+	}
+
+	err = h.GoalService.UpdateGoal(r.Context(), goalID, body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Goal updated successfully"})
+
+}
 
 func (h *GoalHandler) DeleteGoal(w http.ResponseWriter, r *http.Request) {}

@@ -26,13 +26,19 @@ func RegisterRoutes(registry *HandlerRegistry) *mux.Router {
 
 	goalRouter := router.PathPrefix("/api/v1/goals").Subrouter()
 	{
-		goalRouter.HandleFunc("/", registry.GoalHandler.CreateGoal).Methods("POST")
-		goalRouter.HandleFunc("/", registry.GoalHandler.GetGoals).Methods("GET")
+		// Register more specific/static routes first so they don't get captured by the
+		// generic {goalID} parameter route (which would treat e.g. "/widget" as a goalID).
 		goalRouter.HandleFunc("/widget", registry.GoalHandler.GetWidgetGoals).Methods("GET")
 		goalRouter.HandleFunc("/status-counts", registry.GoalHandler.GetStatusCounts).Methods("GET")
-		goalRouter.HandleFunc("/{goalID}/status", registry.GoalHandler.UpdateStatus).Methods("PATCH")
-		goalRouter.HandleFunc("/{goalID}", registry.GoalHandler.UpdateGoal).Methods("PUT")
-		goalRouter.HandleFunc("/{goalID}", registry.GoalHandler.DeleteGoal).Methods("DELETE")
+
+		// Routes that operate on a specific goal by its ID. Constrain the {goalID}
+		// to a UUID-like pattern to avoid catching static paths.
+		goalRouter.HandleFunc("/", registry.GoalHandler.CreateGoal).Methods("POST")
+		goalRouter.HandleFunc("/", registry.GoalHandler.GetGoals).Methods("GET")
+		goalRouter.HandleFunc("/{goalID:[0-9a-fA-F-]{36}}", registry.GoalHandler.GetGoalByID).Methods("GET")
+		goalRouter.HandleFunc("/{goalID:[0-9a-fA-F-]{36}}/status", registry.GoalHandler.UpdateStatus).Methods("PATCH")
+		goalRouter.HandleFunc("/{goalID:[0-9a-fA-F-]{36}}", registry.GoalHandler.UpdateGoal).Methods("PUT")
+		goalRouter.HandleFunc("/{goalID:[0-9a-fA-F-]{36}}", registry.GoalHandler.DeleteGoal).Methods("DELETE")
 	}
 
 	// Middlewares here

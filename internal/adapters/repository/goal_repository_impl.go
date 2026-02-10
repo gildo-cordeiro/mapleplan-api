@@ -83,7 +83,7 @@ func (g *GoalRepositoryImpl) CountGoalsByStatus(ctx context.Context, userID stri
 
 func (g *GoalRepositoryImpl) FindByID(ctx context.Context, id string) (*goal.Goal, error) {
 	var foundedGoal goal.Goal
-	err := g.getDB(ctx).First(&foundedGoal, "id = ?", id).Error
+	err := g.getDB(ctx).Preload("Couple").Preload("User").First(&foundedGoal, "id = ?", id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -123,8 +123,20 @@ func (g *GoalRepositoryImpl) UpdateStatus(ctx context.Context, id string, status
 }
 
 func (g *GoalRepositoryImpl) Update(ctx context.Context, id string, goal *goal.Goal) error {
-	//TODO implement me
-	panic("implement me")
+	foundedGoal, err := g.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	err = foundedGoal.UpdateFields(goal)
+	if err != nil {
+		return err
+	}
+
+	// Ensure loaded associations are nil so GORM doesn't try to create/update related records
+	foundedGoal.User = nil
+	foundedGoal.Couple = nil
+
+	return g.getDB(ctx).Save(foundedGoal).Error
 }
 
 func (g *GoalRepositoryImpl) Delete(ctx context.Context, id string) error {
