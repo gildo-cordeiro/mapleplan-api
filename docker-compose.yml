@@ -1,7 +1,5 @@
-version: "3.8"
-
 services:
-  db:
+  postgres-db:
     image: postgres:15
     container_name: mapleplan_db
     restart: unless-stopped
@@ -13,11 +11,37 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  storage:
+    image: supabase/storage-api:latest
+    depends_on:
+      - postgres-db
+    env_file: .env
+    environment:
+      ANON_KEY: "maple-pla-anon-local"
+      SERVICE_ROLE_KEY: "maple-pla-admin-local"
+      POSTGRES_BACKEND_URL: "postgresql://maple:maple_pass@postgres-db:5432/mapledb"
+      DATABASE_URL: "postgresql://maple:maple_pass@postgres-db:5432/mapledb"
+      FILE_SIZE_LIMIT: "5242880"
+      STORAGE_BACKEND: "file"
+      FILE_STORAGE_BACKEND_PATH: "/var/lib/storage"
+      REGION: "us-east-1"
+      TENANT_ID: "local-project"
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      POSTGRES_USER: "maple"
+      POSTGRES_PASSWORD: "maple_pass"
+      POSTGRES_HOST: "postgres-db"
+    ports:
+      - "8000:5000"
+    volumes:
+      - storage_data:/var/lib/storage
+
 volumes:
   db_data:
+  storage_data:

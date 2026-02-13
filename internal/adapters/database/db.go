@@ -26,6 +26,9 @@ func NewGormDB() (*gorm.DB, error) {
 		return nil, fmt.Errorf("fatal error connecting to PostgreSQL: %w", err)
 	}
 
+	// Set the search path to 'public' to ensure GORM operates in the correct schema
+	db.Exec("SET search_path TO public")
+
 	// Auto-migrate domain models
 	err = db.AutoMigrate(&user.User{}, &province.Province{}, &couple.Couple{}, &goal.Goal{}, &task.Task{}, &transaction.Transaction{})
 	if err != nil {
@@ -38,7 +41,7 @@ func NewGormDB() (*gorm.DB, error) {
 	}
 
 	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
-	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetMaxOpenConns(10)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	return db, nil

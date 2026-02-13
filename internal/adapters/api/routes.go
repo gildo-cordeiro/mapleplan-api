@@ -5,7 +5,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func RegisterRoutes(registry *HandlerRegistry) *mux.Router {
+func RegisterRoutes(registry *HandlerBuilder) *mux.Router {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/health", registry.HealthHandler.Health).Methods("GET")

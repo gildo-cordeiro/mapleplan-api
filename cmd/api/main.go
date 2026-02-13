@@ -8,15 +8,9 @@ import (
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/api"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/bootstrap"
 	"github.com/gildo-cordeiro/mapleplan-api/pkg/utils"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	utils.InitLogger()
-	_ = godotenv.Load()
-
-	utils.Log.Info("Starting MaplePlan API...")
-
 	registry, err := bootstrap.Build()
 	if err != nil {
 		utils.Log.Fatalf("failed to build app: %v", err)
