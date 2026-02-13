@@ -1,9 +1,9 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
-	"strings"
 	"time"
 
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/api"
@@ -12,8 +12,9 @@ import (
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/repository"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/services"
 	"github.com/gildo-cordeiro/mapleplan-api/pkg/utils"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	storagego "github.com/supabase-community/storage-go"
-	"gorm.io/gorm"
 )
 
 func Build() (*api.HandlerBuilder, error) {
@@ -23,9 +24,14 @@ func Build() (*api.HandlerBuilder, error) {
 		return nil, err
 	}
 
-	storageClient, storageBucket, storageErr := buildStorage(cfg, db)
-	if storageErr != nil {
-		utils.Log.Warnf("buildStorage returned error (non-fatal in this context): %v", storageErr)
+	var storageClient interface{}
+	if cfg.AppEnv == "local" {
+		storageClient, err = buildMinIOStorage(cfg)
+	} else {
+		storageClient, err = buildSupabaseStorage(cfg)
+	}
+	if err != nil {
+		utils.Log.Warnf("buildStorage returned error (non-fatal in this context): %v", err)
 	}
 
 	userRepo := repository.NewGormUserRepository(db)
@@ -47,85 +53,93 @@ func Build() (*api.HandlerBuilder, error) {
 		GoalHandler:   goalHandler,
 		AuthHandler:   authHandler,
 		StorageClient: storageClient,
-		StorageBucket: storageBucket,
 	}, nil
 }
 
-func buildStorage(cfg *Config, db *gorm.DB) (*storagego.Client, *storagego.Bucket, error) {
+func buildMinIOStorage(cfg *Config) (*minio.Client, error) {
 	if cfg == nil {
-		return nil, nil, fmt.Errorf("nil config")
-	}
-	// generate token for storage
-	token, err := GenerateLocalToken(cfg.JwtSecret)
-	if err != nil {
-		return nil, nil, fmt.Errorf("generating storage token: %w", err)
+		return nil, fmt.Errorf("nil config")
 	}
 
-	storageClient := storagego.NewClient(cfg.StorageURL, token, nil)
-	bucket, err := storageClient.GetBucket(cfg.StorageBucket)
-
+	minioClient, err := minio.New(cfg.StorageURL, &minio.Options{
+		Creds: credentials.NewStaticV4(cfg.StorageKey, cfg.StorageSecret, ""),
+	})
 	if err != nil {
-		utils.Log.Warnf("Storage bucket '%s' not found (GetBucket error: %v), attempting to create it...", cfg.StorageBucket, err)
+		return nil, fmt.Errorf("initializing MinIO client: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	exists, err := minioClient.BucketExists(ctx, cfg.StorageBucket)
+	if err != nil {
+		return nil, fmt.Errorf("checking bucket existence: %w", err)
+	}
+
+	if !exists {
+		utils.Log.Warnf("MinIO bucket '%s' not found, attempting to create it...", cfg.StorageBucket)
 		const maxAttempts = 5
-		var createErr error
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		rlsTried := false
+
 		for attempt := 1; attempt <= maxAttempts; attempt++ {
-			bucket, createErr = storageClient.CreateBucket(cfg.StorageBucket, storagego.BucketOptions{Public: true})
-			if createErr == nil {
-				utils.Log.Infof("Successfully created storage bucket '%s' (attempt %d)", cfg.StorageBucket, attempt)
-				createErr = nil
+			err = minioClient.MakeBucket(ctx, cfg.StorageBucket, minio.MakeBucketOptions{Region: "us-east-1"})
+			if err == nil {
+				utils.Log.Infof("Successfully created MinIO bucket '%s' (attempt %d)", cfg.StorageBucket, attempt)
 				break
 			}
 
-			// try to handle RLS in local env once
-			if !rlsTried {
-				if disableRLSIfRowLevelError(cfg, db, createErr) {
-					rlsTried = true
-					time.Sleep(500 * time.Millisecond)
-					continue
-				}
+			utils.Log.Warnf("Failed to create bucket '%s' (attempt %d/%d): %v", cfg.StorageBucket, attempt, maxAttempts, err)
+			sleep := time.Duration(1<<uint(attempt-1)) * time.Second
+			jitter := time.Duration(r.Intn(500)) * time.Millisecond
+			time.Sleep(sleep + jitter)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("unable to create MinIO bucket '%s' after %d attempts: %w", cfg.StorageBucket, maxAttempts, err)
+		}
+	} else {
+		utils.Log.Infof("MinIO bucket '%s' already exists", cfg.StorageBucket)
+	}
+
+	return minioClient, nil
+}
+
+func buildSupabaseStorage(cfg *Config) (*storagego.Client, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("nil config")
+	}
+
+	token, err := GenerateLocalToken(cfg.JwtSecret)
+	if err != nil {
+		return nil, fmt.Errorf("generating storage token: %w", err)
+	}
+
+	storageClient := storagego.NewClient(cfg.StorageURL, token, nil)
+	_, err = storageClient.GetBucket(cfg.StorageBucket)
+
+	if err != nil {
+		utils.Log.Warnf("Storage bucket '%s' not found, attempting to create it...", cfg.StorageBucket)
+		const maxAttempts = 5
+		var createErr error
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+		for attempt := 1; attempt <= maxAttempts; attempt++ {
+			_, createErr = storageClient.CreateBucket(cfg.StorageBucket, storagego.BucketOptions{Public: true})
+			if createErr == nil {
+				utils.Log.Infof("Successfully created storage bucket '%s' (attempt %d)", cfg.StorageBucket, attempt)
+				break
 			}
 
 			utils.Log.Warnf("Failed to create bucket '%s' (attempt %d/%d): %v", cfg.StorageBucket, attempt, maxAttempts, createErr)
-			// exponential backoff with jitter
 			sleep := time.Duration(1<<uint(attempt-1)) * time.Second
 			jitter := time.Duration(r.Intn(500)) * time.Millisecond
 			time.Sleep(sleep + jitter)
 		}
 		if createErr != nil {
-			return nil, nil, fmt.Errorf("unable to create storage bucket '%s' after %d attempts: %w", cfg.StorageBucket, maxAttempts, createErr)
+			return nil, fmt.Errorf("unable to create storage bucket '%s' after %d attempts: %w", cfg.StorageBucket, maxAttempts, createErr)
 		}
 	} else {
 		utils.Log.Infof("Storage bucket '%s' already exists", cfg.StorageBucket)
 	}
 
-	return storageClient, &bucket, nil
-}
-
-func disableRLSIfRowLevelError(cfg *Config, db *gorm.DB, createErr error) bool {
-	if cfg == nil || createErr == nil {
-		return false
-	}
-	if cfg.AppEnv != "local" {
-		utils.Log.Debugf("DisableRLSIfRowLevelError skipped because AppEnv=%s", cfg.AppEnv)
-		return false
-	}
-	msg := createErr.Error()
-	if !(strings.Contains(msg, "row-level security") || strings.Contains(msg, "violates row-level")) {
-		return false
-	}
-	utils.Log.Warnf("Detected RLS error while creating bucket: %v; attempting to disable RLS on storage.buckets (local only)", createErr)
-	if db == nil {
-		utils.Log.Errorf("DB connection is nil; cannot disable RLS")
-		return false
-	}
-	if execErr := db.Exec("ALTER TABLE IF EXISTS storage.buckets DISABLE ROW LEVEL SECURITY;").Error; execErr != nil {
-		utils.Log.Errorf("Failed to disable RLS via DB: %v", execErr)
-		return false
-	}
-	utils.Log.Infof("Disabled RLS on storage.buckets via DB; will allow CreateBucket to retry")
-	// small pause to let DB propagate
-	time.Sleep(500 * time.Millisecond)
-	return true
+	return storageClient, nil
 }

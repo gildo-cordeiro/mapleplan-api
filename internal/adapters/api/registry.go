@@ -2,7 +2,6 @@ package api
 
 import (
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/handlers"
-	storagego "github.com/supabase-community/storage-go"
 )
 
 type HandlerBuilder struct {
@@ -11,6 +10,5 @@ type HandlerBuilder struct {
 	GoalHandler   handlers.GoalHandler
 	AuthHandler   handlers.AuthHandler
 
-	StorageClient *storagego.Client
-	StorageBucket *storagego.Bucket
+	StorageClient interface{}
 }

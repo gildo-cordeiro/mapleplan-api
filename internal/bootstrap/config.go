@@ -13,6 +13,7 @@ type Config struct {
 	StorageURL    string
 	StorageKey    string
 	StorageBucket string
+	StorageSecret string
 	AppEnv        string
 }
 
@@ -31,6 +32,7 @@ func LoadConfig() *Config {
 		StorageURL:    os.Getenv("STORAGE_URL"),
 		StorageKey:    os.Getenv("STORAGE_KEY"),
 		StorageBucket: os.Getenv("STORAGE_BUCKET"),
+		StorageSecret: os.Getenv("STORAGE_SECRET"),
 		AppEnv:        os.Getenv("APP_ENV"),
 	}
 }
