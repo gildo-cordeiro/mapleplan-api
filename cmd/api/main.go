@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/api"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/api"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/bootstrap"
 	"github.com/gildo-cordeiro/mapleplan-api/pkg/utils"
 )

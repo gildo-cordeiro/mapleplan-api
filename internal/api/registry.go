@@ -9,6 +9,4 @@ type HandlerBuilder struct {
 	UserHandler   handlers.UserHandler
 	GoalHandler   handlers.GoalHandler
 	AuthHandler   handlers.AuthHandler
-
-	StorageClient interface{}
 }

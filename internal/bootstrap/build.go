@@ -3,18 +3,21 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"time"
 
-	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/api"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/database"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/handlers"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/adapters/repository"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/api"
+	ports "github.com/gildo-cordeiro/mapleplan-api/internal/core/ports/services"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/services"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/storage"
 	"github.com/gildo-cordeiro/mapleplan-api/pkg/utils"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	storagego "github.com/supabase-community/storage-go"
 )
 
 func Build() (*api.HandlerBuilder, error) {
@@ -24,14 +27,10 @@ func Build() (*api.HandlerBuilder, error) {
 		return nil, err
 	}
 
-	var storageClient interface{}
-	if cfg.AppEnv == "local" {
-		storageClient, err = buildMinIOStorage(cfg)
-	} else {
-		storageClient, err = buildSupabaseStorage(cfg)
-	}
+	storageAdapter, err := buildS3Storage(cfg)
 	if err != nil {
 		utils.Log.Warnf("buildStorage returned error (non-fatal in this context): %v", err)
+		return nil, err
 	}
 
 	userRepo := repository.NewGormUserRepository(db)
@@ -41,6 +40,7 @@ func Build() (*api.HandlerBuilder, error) {
 
 	userService := services.NewUserService(userRepo, coupleRepo, txtManager)
 	goalService := services.NewGoalService(userRepo, goalRepo, coupleRepo, txtManager)
+	services.NewStorageService(storageAdapter)
 
 	health := handlers.HealthCheck{}
 	userHandler := handlers.UserHandler{UserService: userService}
@@ -52,94 +52,58 @@ func Build() (*api.HandlerBuilder, error) {
 		UserHandler:   userHandler,
 		GoalHandler:   goalHandler,
 		AuthHandler:   authHandler,
-		StorageClient: storageClient,
 	}, nil
 }
 
-func buildMinIOStorage(cfg *Config) (*minio.Client, error) {
+func buildS3Storage(cfg *Config) (ports.StorageService, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("nil config")
 	}
 
-	minioClient, err := minio.New(cfg.StorageURL, &minio.Options{
-		Creds: credentials.NewStaticV4(cfg.StorageKey, cfg.StorageSecret, ""),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("initializing MinIO client: %w", err)
+	// Create AWS config with static credentials
+	loadOptions := []func(*config.LoadOptions) error{
+		config.WithRegion(cfg.AWSRegion),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.AWSAccessKeyID, cfg.AWSSecretAccessKey, "")),
 	}
 
+	awsCfg, err := config.LoadDefaultConfig(context.Background(), loadOptions...)
+	if err != nil {
+		utils.Log.Errorf("loading AWS config: %v", err)
+		return nil, err
+	}
+
+	s3Client := s3.NewFromConfig(awsCfg, func(options *s3.Options) {
+		if cfg.S3Endpoint != "" {
+			options.BaseEndpoint = aws.String(cfg.S3Endpoint)
+			options.UsePathStyle = true
+		}
+	})
+
+	// Verify bucket exists
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	exists, err := minioClient.BucketExists(ctx, cfg.StorageBucket)
+	_, err = s3Client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: &cfg.StorageBucket})
 	if err != nil {
-		return nil, fmt.Errorf("checking bucket existence: %w", err)
-	}
-
-	if !exists {
-		utils.Log.Warnf("MinIO bucket '%s' not found, attempting to create it...", cfg.StorageBucket)
-		const maxAttempts = 5
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-		for attempt := 1; attempt <= maxAttempts; attempt++ {
-			err = minioClient.MakeBucket(ctx, cfg.StorageBucket, minio.MakeBucketOptions{Region: "us-east-1"})
-			if err == nil {
-				utils.Log.Infof("Successfully created MinIO bucket '%s' (attempt %d)", cfg.StorageBucket, attempt)
-				break
+		utils.Log.Warnf("Failed to access S3 bucket '%s': %v", cfg.StorageBucket, err)
+		if cfg.S3Endpoint != "" {
+			createInput := &s3.CreateBucketInput{Bucket: &cfg.StorageBucket}
+			if cfg.AWSRegion != "" && cfg.AWSRegion != "us-east-1" {
+				createInput.CreateBucketConfiguration = &types.CreateBucketConfiguration{
+					LocationConstraint: types.BucketLocationConstraint(cfg.AWSRegion),
+				}
 			}
 
-			utils.Log.Warnf("Failed to create bucket '%s' (attempt %d/%d): %v", cfg.StorageBucket, attempt, maxAttempts, err)
-			sleep := time.Duration(1<<uint(attempt-1)) * time.Second
-			jitter := time.Duration(r.Intn(500)) * time.Millisecond
-			time.Sleep(sleep + jitter)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("unable to create MinIO bucket '%s' after %d attempts: %w", cfg.StorageBucket, maxAttempts, err)
-		}
-	} else {
-		utils.Log.Infof("MinIO bucket '%s' already exists", cfg.StorageBucket)
-	}
-
-	return minioClient, nil
-}
-
-func buildSupabaseStorage(cfg *Config) (*storagego.Client, error) {
-	if cfg == nil {
-		return nil, fmt.Errorf("nil config")
-	}
-
-	token, err := GenerateLocalToken(cfg.JwtSecret)
-	if err != nil {
-		return nil, fmt.Errorf("generating storage token: %w", err)
-	}
-
-	storageClient := storagego.NewClient(cfg.StorageURL, token, nil)
-	_, err = storageClient.GetBucket(cfg.StorageBucket)
-
-	if err != nil {
-		utils.Log.Warnf("Storage bucket '%s' not found, attempting to create it...", cfg.StorageBucket)
-		const maxAttempts = 5
-		var createErr error
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-		for attempt := 1; attempt <= maxAttempts; attempt++ {
-			_, createErr = storageClient.CreateBucket(cfg.StorageBucket, storagego.BucketOptions{Public: true})
-			if createErr == nil {
-				utils.Log.Infof("Successfully created storage bucket '%s' (attempt %d)", cfg.StorageBucket, attempt)
-				break
+			_, createErr := s3Client.CreateBucket(ctx, createInput)
+			if createErr != nil {
+				utils.Log.Warnf("Failed to create S3 bucket '%s': %v", cfg.StorageBucket, createErr)
+			} else {
+				utils.Log.Infof("Created S3 bucket '%s'", cfg.StorageBucket)
 			}
-
-			utils.Log.Warnf("Failed to create bucket '%s' (attempt %d/%d): %v", cfg.StorageBucket, attempt, maxAttempts, createErr)
-			sleep := time.Duration(1<<uint(attempt-1)) * time.Second
-			jitter := time.Duration(r.Intn(500)) * time.Millisecond
-			time.Sleep(sleep + jitter)
-		}
-		if createErr != nil {
-			return nil, fmt.Errorf("unable to create storage bucket '%s' after %d attempts: %w", cfg.StorageBucket, maxAttempts, createErr)
 		}
 	} else {
-		utils.Log.Infof("Storage bucket '%s' already exists", cfg.StorageBucket)
+		utils.Log.Infof("Successfully connected to S3 bucket '%s'", cfg.StorageBucket)
 	}
 
-	return storageClient, nil
+	return storage.NewS3Storage(s3Client, cfg.AWSRegion, cfg.S3Endpoint, utils.Log.Logger), nil
 }
