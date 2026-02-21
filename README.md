@@ -1,51 +1,121 @@
-# mapleplan-api — Arquitetura Hexagonal (Ports & Adapters)
+# MaplePlan API
 
-Este repositório foi reorganizado para seguir a arquitetura Hexagonal (Ports & Adapters).
+Backend API for MaplePlan - a financial planning and goals management platform for couples planning to immigrate to Canada.
 
-Estrutura principal (resumida):
+## 🏗️ Architecture: Simplified 3-Layer
+
+A pragmatic architecture that balances separation of concerns with operational simplicity.
+
+**3 Layers:**
+1. **API Layer** → HTTP handlers, middlewares, routes
+2. **Business Layer** → All pure business logic
+3. **Data Layer** → Data access, storage, models
+
+**Flow:** Request → Handlers (validate) → Services (logic) → Repositories (data) → Response
+
+### 📁 Complete Structure
 
 ```
-cmd/meu-servico/main.go       # Ponto de entrada (usa a fábrica/registry para compor dependências)
-internal/
-  core/
-    domain/                   # Entidades, agregados, value objects
-    ports/
-      repositories/           # Portas de saída (interfaces de repositório)
-      services/               # Portas de entrada (interfaces de caso de uso)
-  services/                   # Implementações dos casos de uso (dependem de ports)
-  adapters/
-    api/                      # Roteamento e registry de handlers
-    repository/               # Implementações concretas dos repositórios (GORM)
-    handlers/                 # Handlers HTTP (adaptadores de entrada)
-    di/                       # Fábrica/registry para compor dependências
-pkg/                          # Bibliotecas reutilizáveis
-configs/                      # Configurações e exemplos (.env.example)
+mapleplan-api/
+├── cmd/
+│   └── server/
+│       └── main.go
+├── internal/
+│   ├── api/
+│   │   ├── handlers/
+│   │   ├── middleware/
+│   │   └── (routes and registry)
+│   │
+│   ├── business/
+│   │   ├── (goal_service_impl.go)
+│   │   ├── (user_service_impl.go)
+│   │   └── (storage_service_impl.go)
+│   │
+│   ├── data/
+│   │   ├── database/
+│   │   ├── models/
+│   │   │   ├── goal/
+│   │   │   ├── user/
+│   │   │   ├── couple/
+│   │   │   ├── task/
+│   │   │   ├── transaction/
+│   │   │   └── province/
+│   │   ├── repositories/
+│   │   └── storage/
+│   │
+│   ├── dto/
+│   │   ├── goal/
+│   │   │   ├── request/
+│   │   │   ├── response/
+│   │   │   └── mapper/
+│   │   └── user/
+│   │       ├── request/
+│   │       └── response/
+│   │
+│   ├── ports/
+│   │   ├── repositories/
+│   │   └── services/
+│   │
+│   └── bootstrap/
+│       ├── (build_app.go)
+│       ├── (build_storage.go)
+│       └── (config.go)
+│
+├── pkg/
+│   ├── jwt/
+│   └── utils/
+│
+├── go.mod
+├── go.sum
+├── .env.example
+├── docker-compose.yml
+├── Dockerfile
+└── README.md
 ```
 
-Como funciona
-- As interfaces (ports) vivem em `internal/core/ports`.
-- Implementações de infra (DB, HTTP, logger) vivem em `internal/adapters`.
-- Os services (casos de uso) em `internal/services` dependem apenas das ports.
-- A fábrica `internal/adapters/di/registry.go` compõe DB -> Repos -> Services -> Handlers
-  e retorna um `api.HandlerRegistry` que é usado pelo roteador em `internal/adapters/api`.
+## Getting Started
 
-Rodando localmente
+### Prerequisites
+- Go 1.21+
+- PostgreSQL
+- AWS S3 (or MinIO)
 
-1. Build:
-
-```powershell
-cd C:\Users\Gildo\mapleplan-api
-go build ./...
+### Setup
+```bash
+cp .env.example .env
+go mod download
+go build ./cmd/server/main.go
+go run ./cmd/server/main.go
 ```
 
-2. Testes:
+Server running at `http://localhost:8080`
 
-```powershell
+## 🛠️ Stack
+
+- **Framework**: Gorilla Mux
+- **ORM**: GORM
+- **Database**: PostgreSQL
+- **Storage**: AWS S3
+- **Auth**: JWT
+
+## 📝 Conventions
+
+- **Handlers**: `{Resource}Handler`
+- **Services**: `{Resource}ServiceImpl`
+- **Repositories**: `{Resource}RepositoryImpl`
+- **Models**: `internal/data/models/{entity}`
+
+## 🧪 Testing
+
+```bash
 go test ./...
+go test -cover ./...
 ```
 
-3. Rodar o servidor (a partir da raiz):
+## 🤝 Contributing
 
-```powershell
-go run ./cmd/api
+```bash
+git checkout -b feat/my-feature
+git commit -m 'feat: description'
+git push origin feat/my-feature
 ```
