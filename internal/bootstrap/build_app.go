@@ -25,11 +25,17 @@ func Build() (*api.BuildRegistry, error) {
 
 	userRepo := repositories.NewGormUserRepository(db)
 	goalRepo := repositories.NewGormGoalRepository(db)
-	coupleRepo := repositories.NewGormCoupleRepository(db)
+	financeRepo := repositories.NewGormFinanceRepository(db)
+	profileRepo := repositories.NewGormProfileRepository(db)
+	memberRepo := repositories.NewGormProfileMemberRepository(db)
 	txtManager := repositories.NewGormTransactionManager(db)
 
-	userService := business.NewUserService(userRepo, coupleRepo, txtManager)
-	goalService := business.NewGoalService(userRepo, goalRepo, coupleRepo, txtManager)
+	_ = financeRepo
+	_ = profileRepo
+	_ = memberRepo
+
+	userService := business.NewUserService(userRepo, profileRepo, memberRepo, txtManager)
+	goalService := business.NewGoalService(userRepo, goalRepo, profileRepo, memberRepo, txtManager)
 	business.NewStorageService(storageAdapter)
 
 	health := handlers.HealthCheck{}

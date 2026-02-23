@@ -13,7 +13,6 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.11.2
-	github.com/shopspring/decimal v1.4.0
 	github.com/sirupsen/logrus v1.9.4
 	golang.org/x/crypto v0.48.0
 	gorm.io/gorm v1.31.1

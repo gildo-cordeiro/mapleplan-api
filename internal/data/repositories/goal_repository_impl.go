@@ -26,32 +26,30 @@ func NewGormGoalRepository(db *gorm.DB) ports.GoalRepository {
 	return &GoalRepositoryImpl{db: db}
 }
 
-func (g *GoalRepositoryImpl) FindWidgetGoals(ctx context.Context, userID string, limit int) ([]*goal.Goal, error) {
+func (g *GoalRepositoryImpl) FindWidgetGoals(ctx context.Context, userID string, profileID *string, limit int) ([]*goal.Goal, error) {
 	var goals []*goal.Goal
 	db := g.getDB(ctx)
 
-	err := db.Preload("Couple").
-		Joins("JOIN couples ON goals.couple_id = couples.id").
-		Where("couples.user_a_id = ? OR couples.user_b_id = ?", userID, userID).
-		Order("goals.created_at DESC").
-		Limit(limit).
-		Find(&goals).Error
-	if err != nil {
-		return nil, err
-	}
-	if len(goals) > 0 {
-		return goals, nil
+	if profileID != nil {
+		err := db.Preload("Profile").Preload("User").
+			Where("profile_id = ?", *profileID).
+			Order("created_at DESC").
+			Limit(limit).
+			Find(&goals).Error
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err := db.Preload("Profile").Preload("User").
+			Where("user_id = ?", userID).
+			Order("created_at DESC").
+			Limit(limit).
+			Find(&goals).Error
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	goals = nil
-	err = db.Preload("User").
-		Where("goals.user_id = ?", userID).
-		Order("goals.created_at DESC").
-		Limit(limit).
-		Find(&goals).Error
-	if err != nil {
-		return nil, err
-	}
 	return goals, nil
 }
 
@@ -63,11 +61,12 @@ func (g *GoalRepositoryImpl) CountGoalsByStatus(ctx context.Context, userID stri
 	var results []Result
 	db := g.getDB(ctx)
 
+	// Count goals where user is either the owner or a member of the profile
 	err := db.
 		Table("goals").
 		Select("status, COUNT(*) as count").
-		Joins("LEFT JOIN couples ON goals.couple_id = couples.id").
-		Where("couples.user_a_id = ? OR couples.user_b_id = ? OR goals.user_id = ?", userID, userID, userID).
+		Joins("LEFT JOIN profile_members ON goals.profile_id = profile_members.profile_id").
+		Where("profile_members.user_id = ? OR goals.user_id = ?", userID, userID).
 		Group("status").
 		Scan(&results).Error
 	if err != nil {
@@ -83,7 +82,7 @@ func (g *GoalRepositoryImpl) CountGoalsByStatus(ctx context.Context, userID stri
 
 func (g *GoalRepositoryImpl) FindByID(ctx context.Context, id string) (*goal.Goal, error) {
 	var foundedGoal goal.Goal
-	err := g.getDB(ctx).Preload("Couple").Preload("User").First(&foundedGoal, "id = ?", id).Error
+	err := g.getDB(ctx).Preload("User").Preload("Profile").First(&foundedGoal, "id = ?", id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -98,15 +97,19 @@ func (g *GoalRepositoryImpl) Save(ctx context.Context, goal *goal.Goal) error {
 	return nil
 }
 
-func (g *GoalRepositoryImpl) FindGoals(ctx context.Context, userID string) ([]*goal.Goal, error) {
+func (g *GoalRepositoryImpl) FindGoals(ctx context.Context, userID string, limit *int) ([]*goal.Goal, error) {
 	var goals []*goal.Goal
 	db := g.getDB(ctx)
+	query := db.Preload("User").Preload("Profile").
+		Joins("LEFT JOIN profile_members ON goals.profile_id = profile_members.profile_id").
+		Where("profile_members.user_id = ? OR goals.user_id = ?", userID, userID).
+		Order("goals.created_at DESC")
 
-	err := db.Preload("Couple").Preload("User").
-		Joins("LEFT JOIN couples ON goals.couple_id = couples.id").
-		Where("couples.user_a_id = ? OR couples.user_b_id = ? OR goals.user_id = ?", userID, userID, userID).
-		Order("goals.created_at DESC").
-		Find(&goals).Error
+	if limit != nil {
+		query = query.Limit(*limit)
+	}
+
+	err := query.Find(&goals).Error
 	if err != nil {
 		return nil, err
 	}
@@ -129,12 +132,11 @@ func (g *GoalRepositoryImpl) Update(ctx context.Context, id string, goal *goal.G
 
 	// Ensure loaded associations are nil so GORM doesn't try to create/update related records
 	foundedGoal.User = nil
-	foundedGoal.Couple = nil
+	foundedGoal.ImmigrationProfile = nil
 
 	return g.getDB(ctx).Save(foundedGoal).Error
 }
 
 func (g *GoalRepositoryImpl) Delete(ctx context.Context, id string) error {
-	//TODO implement me
-	panic("implement me")
+	return g.getDB(ctx).Delete(&goal.Goal{}, "id = ?", id).Error
 }

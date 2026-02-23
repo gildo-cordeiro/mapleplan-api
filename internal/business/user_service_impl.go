@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/gildo-cordeiro/mapleplan-api/internal/data/models/profile"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/data/models/user"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/dto/user/request"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/dto/user/response"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/data/models/couple"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/data/models/user"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/ports"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/ports/repositories"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/ports/services"
@@ -18,13 +18,14 @@ import (
 )
 
 type UserServiceImpl struct {
-	userRepository   repositories.UserRepository
-	coupleRepository repositories.CoupleRepository
-	txManager        ports.TransactionManager
+	userRepository          repositories.UserRepository
+	profileRepository       repositories.ProfileRepository
+	profileMemberRepository repositories.ProfileMemberRepository
+	txManager               ports.TransactionManager
 }
 
-func NewUserService(r repositories.UserRepository, c repositories.CoupleRepository, txManager ports.TransactionManager) services.UserService {
-	return &UserServiceImpl{userRepository: r, coupleRepository: c, txManager: txManager}
+func NewUserService(r repositories.UserRepository, p repositories.ProfileRepository, m repositories.ProfileMemberRepository, txManager ports.TransactionManager) services.UserService {
+	return &UserServiceImpl{userRepository: r, profileRepository: p, profileMemberRepository: m, txManager: txManager}
 }
 
 func (s *UserServiceImpl) FindByEmailAndPass(email, pass string) (*user.User, error) {
@@ -84,51 +85,23 @@ func (s *UserServiceImpl) RegisterUser(newUser request.CreateUserRequest) (strin
 
 func (s *UserServiceImpl) UpdateOnboarding(ctx context.Context, userId string, dto request.UpdateUserOnboardingRequest) error {
 	return s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		userFounded, err := s.userRepository.FindByID(txCtx, userId)
+		userFounded, updatedUser, err := s.prepareUserUpdate(txCtx, userId, dto)
 		if err != nil {
-			utils.Log.Errorf("error finding user by id: %v", err)
-			return utils.ErrInternal
+			return err
 		}
 
-		updatedUser, err := user.NewFromUpdateOnboardingDTO(dto, userFounded)
+		partner, err := s.findPartner(txCtx, dto.PartnerEmail)
 		if err != nil {
-			utils.Log.Errorf("error creating user from update onboarding dto: %v", err)
-			return utils.ErrInternal
+			return err
 		}
 
-		if dto.PartnerEmail != "" {
-			partner, err := s.userRepository.FindByEmail(txCtx, dto.PartnerEmail)
-			if err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					utils.Log.Infof("partner not found, finishing onboarding without partner email=%s", dto.PartnerEmail)
-				} else {
-					utils.Log.Errorf("error finding partner by email: %v", err)
-					return utils.ErrInternal
-				}
-			} else {
-				// Partner found, create couple that references both users
-				coupleName := dto.FirstName + " & " + partner.FirstName
-				if coupleName == "" {
-					coupleName = fmt.Sprintf("%s & %s", updatedUser.FirstName, partner.FirstName)
-				}
+		profileID, err := s.createImmigrationProfile(txCtx, userId, userFounded.FirstName, partner)
+		if err != nil {
+			return err
+		}
 
-				// normalize order to avoid duplicate couples with reversed users
-				aID := userId
-				bID := partner.ID
-				if aID > bID {
-					aID, bID = bID, aID
-				}
-
-				c := &couple.Couple{
-					UserAID: &aID,
-					UserBID: &bID,
-					Name:    coupleName,
-				}
-				if err := s.coupleRepository.Save(txCtx, c); err != nil {
-					utils.Log.Errorf("error creating couple: %v", err)
-					return utils.ErrInternal
-				}
-			}
+		if err := s.addProfileMembers(txCtx, profileID, userId, partner); err != nil {
+			return err
 		}
 
 		if err := s.userRepository.Update(txCtx, userId, updatedUser); err != nil {
@@ -181,33 +154,41 @@ func (s *UserServiceImpl) GetCompleteUser(ctx context.Context, userID string) (*
 			Phone:     u.Phone,
 		}
 
-		c, err := s.coupleRepository.FindByUserID(ctx, userID)
+		// Find profile members for this user
+		members, err := s.profileMemberRepository.FindByUserID(txCtx, userID)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil
 			}
-			utils.Log.Errorf("error finding couple by user id: %v", err)
+			utils.Log.Errorf("error finding profile members by user id: %v", err)
 			return utils.ErrInternal
 		}
-		if c != nil {
-			var partnerID string
-			if c.UserAID != nil && *c.UserAID != userID {
-				partnerID = *c.UserAID
-			} else if c.UserBID != nil && *c.UserBID != userID {
-				partnerID = *c.UserBID
+
+		// If user has profile memberships, use the first one (typically should have one main profile)
+		if len(members) > 0 && members[0].Profile != nil {
+			profile := members[0].Profile
+			userFounded.CoupleID = &profile.ID // Use ProfileID as CoupleID for backward compatibility
+
+			// Find other members of this profile to get partner info
+			profileMembers, err := s.profileMemberRepository.FindByProfileID(txCtx, profile.ID)
+			if err != nil {
+				utils.Log.Errorf("error finding profile members: %v", err)
+				return utils.ErrInternal
 			}
 
-			if partnerID != "" {
-				partner, err := s.userRepository.FindByID(txCtx, partnerID)
-				if err != nil {
-					utils.Log.Errorf("error finding partner by id: %v", err)
-					return utils.ErrInternal
+			for _, member := range profileMembers {
+				if member.UserID != userID {
+					partner, err := s.userRepository.FindByID(txCtx, member.UserID)
+					if err != nil {
+						utils.Log.Errorf("error finding partner by id: %v", err)
+						continue
+					}
+					userFounded.PartnerEmail = &partner.Email
+					userFounded.PartnerFirstName = &partner.FirstName
+					userFounded.PartnerLastName = &partner.LastName
+					userFounded.PartnerId = &partner.ID
+					break
 				}
-				userFounded.PartnerEmail = &partner.Email
-				userFounded.PartnerFirstName = &partner.FirstName
-				userFounded.PartnerLastName = &partner.LastName
-				userFounded.CoupleID = &c.ID
-				userFounded.PartnerId = &partnerID
 			}
 		}
 
@@ -226,4 +207,89 @@ func hashPassword(password string) (string, error) {
 		return "", err
 	}
 	return string(hashed), nil
+}
+
+func (s *UserServiceImpl) prepareUserUpdate(ctx context.Context, userId string, dto request.UpdateUserOnboardingRequest) (*user.User, *user.User, error) {
+	userFounded, err := s.userRepository.FindByID(ctx, userId)
+	if err != nil {
+		utils.Log.Errorf("error finding user by id: %v", err)
+		return nil, nil, utils.ErrInternal
+	}
+
+	updatedUser, err := user.NewFromUpdateOnboardingDTO(dto, userFounded)
+	if err != nil {
+		utils.Log.Errorf("error creating user from update onboarding dto: %v", err)
+		return nil, nil, utils.ErrInternal
+	}
+
+	return userFounded, updatedUser, nil
+}
+
+func (s *UserServiceImpl) findPartner(ctx context.Context, partnerEmail string) (*user.User, error) {
+	if partnerEmail == "" {
+		return nil, nil
+	}
+
+	partner, err := s.userRepository.FindByEmail(ctx, partnerEmail)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			utils.Log.Infof("partner not found, finishing onboarding without partner email=%s", partnerEmail)
+			return nil, nil
+		}
+		utils.Log.Errorf("error finding partner by email: %v", err)
+		return nil, utils.ErrInternal
+	}
+
+	return partner, nil
+}
+
+func (s *UserServiceImpl) createImmigrationProfile(ctx context.Context, userId, userFirstName string, partner *user.User) (string, error) {
+	var profileName string
+	if partner != nil {
+		profileName = fmt.Sprintf("%s & %s", userFirstName, partner.FirstName)
+	} else {
+		profileName = fmt.Sprintf("%s's Profile", userFirstName)
+	}
+
+	p := &profile.ImmigrationProfile{
+		UserID: userId,
+		Name:   profileName,
+	}
+
+	if err := s.profileRepository.Save(ctx, p); err != nil {
+		utils.Log.Errorf("error creating profile: %v", err)
+		return "", utils.ErrInternal
+	}
+
+	return p.ID, nil
+}
+
+func (s *UserServiceImpl) addProfileMembers(ctx context.Context, profileID, userId string, partner *user.User) error {
+	// Add primary member
+	primaryMember, err := profile.NewProfileMember(profileID, userId, profile.RolePrimary)
+	if err != nil {
+		utils.Log.Errorf("error creating primary member: %v", err)
+		return utils.ErrInternal
+	}
+
+	if err := s.profileMemberRepository.Save(ctx, primaryMember); err != nil {
+		utils.Log.Errorf("error saving primary member: %v", err)
+		return utils.ErrInternal
+	}
+
+	// Add spouse member (if exists)
+	if partner != nil {
+		spouseMember, err := profile.NewProfileMember(profileID, partner.ID, profile.RoleSpouse)
+		if err != nil {
+			utils.Log.Errorf("error creating spouse member: %v", err)
+			return utils.ErrInternal
+		}
+
+		if err := s.profileMemberRepository.Save(ctx, spouseMember); err != nil {
+			utils.Log.Errorf("error saving spouse member: %v", err)
+			return utils.ErrInternal
+		}
+	}
+
+	return nil
 }

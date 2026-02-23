@@ -30,7 +30,7 @@ func (h *GoalHandler) GetWidgetGoals(w http.ResponseWriter, r *http.Request) {
 		intLimit = 3
 	}
 
-	results, err := h.GoalService.GetWidgetGoals(r.Context(), userID, intLimit)
+	results, err := h.GoalService.GetGoals(r.Context(), userID, &intLimit)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
@@ -91,7 +91,7 @@ func (h *GoalHandler) GetGoals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := h.GoalService.GetGoals(r.Context(), userID)
+	results, err := h.GoalService.GetGoals(r.Context(), userID, nil)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})

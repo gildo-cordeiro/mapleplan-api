@@ -1,13 +1,13 @@
 package user
 
 import (
-	"github.com/gildo-cordeiro/mapleplan-api/internal/dto/user/request"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/data/models"
+	"github.com/gildo-cordeiro/mapleplan-api/internal/dto/user/request"
 	"github.com/gildo-cordeiro/mapleplan-api/pkg/utils"
 )
 
 type User struct {
-	domain.Base
+	models.Base
 
 	Email        string  `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
 	PasswordHash string  `gorm:"type:text;not null" json:"-"`

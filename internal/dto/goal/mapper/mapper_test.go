@@ -8,15 +8,15 @@ import (
 
 func TestUpdateGoalRequestToGoalDomain_ShouldNotCreatePointerWhenEmpty(t *testing.T) {
 	req := request.UpdateGoalRequestBody{
-		Title:            "t",
-		AssignedToUser:   "",
-		AssignedToCouple: "",
+		Title:             "t",
+		AssignedToUser:    "",
+		AssignedToProfile: "",
 	}
 	g := UpdateGoalRequestToGoalDomain(&req)
-	if g.UserId != nil {
-		t.Fatalf("expected UserId to be nil when AssignedToUser is empty, got: %v", *g.UserId)
+	if g.UserID != nil {
+		t.Fatalf("expected UserID to be nil when AssignedToUser is empty, got: %v", *g.UserID)
 	}
-	if g.CoupleID != nil {
-		t.Fatalf("expected CoupleID to be nil when AssignedToCouple is empty, got: %v", *g.CoupleID)
+	if g.ImmigrationProfileID != nil {
+		t.Fatalf("expected ProfileID to be nil when AssignedToProfile is empty, got: %v", *g.ImmigrationProfileID)
 	}
 }

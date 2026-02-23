@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gildo-cordeiro/mapleplan-api/internal/data/models/goal"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/dto/goal/request"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/dto/goal/response"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/data/models/goal"
 )
 
 func ToWidgetGoalResponse(g *goal.Goal) response.WidgetGoalResponse {
@@ -37,15 +37,15 @@ func ToGoalResponse(g *goal.Goal) response.GoalResponse {
 
 func ToGoalUpdateResponse(g *goal.Goal) response.GoalResponse {
 	return response.GoalResponse{
-		ID:               g.ID,
-		Title:            g.Name,
-		Description:      g.Description,
-		DueDate:          formatDate(g.DueDate),
-		Status:           goal.StatusToString(g.Status),
-		Phase:            goal.PhaseToString(g.Phase),
-		Priority:         goal.PriorityToString(g.Priority),
-		AssignedToUser:   g.UserId,
-		AssignedToCouple: g.CoupleID,
+		ID:                g.ID,
+		Title:             g.Name,
+		Description:       g.Description,
+		DueDate:           formatDate(g.DueDate),
+		Status:            goal.StatusToString(g.Status),
+		Phase:             goal.PhaseToString(g.Phase),
+		Priority:          goal.PriorityToString(g.Priority),
+		AssignedToUser:    g.UserID,
+		AssignedToProfile: g.ImmigrationProfileID,
 	}
 }
 
@@ -78,20 +78,20 @@ func UpdateGoalRequestToGoalDomain(u *request.UpdateGoalRequestBody) *goal.Goal 
 	if u.AssignedToUser != "" {
 		userID = &u.AssignedToUser
 	}
-	var coupleID *string
-	if u.AssignedToCouple != "" {
-		coupleID = &u.AssignedToCouple
+	var profileID *string
+	if u.AssignedToProfile != "" {
+		profileID = &u.AssignedToProfile
 	}
 
 	return &goal.Goal{
-		Name:        u.Title,
-		Description: &u.Description,
-		DueDate:     dueDate,
-		Status:      status,
-		Phase:       phase,
-		Priority:    priority,
-		UserId:      userID,
-		CoupleID:    coupleID,
+		Name:                 u.Title,
+		Description:          &u.Description,
+		DueDate:              dueDate,
+		Status:               status,
+		Phase:                phase,
+		Priority:             priority,
+		UserID:               userID,
+		ImmigrationProfileID: profileID,
 	}
 }
 
@@ -128,10 +128,10 @@ func toDate(dateStr string) (time.Time, error) {
 
 func getCorrectAssignedUserID(g *goal.Goal) string {
 	// Be defensive: check both the ID pointer and the loaded relation to avoid nil dereference
-	if g.CoupleID != nil && g.Couple != nil {
-		return g.Couple.Name
+	if g.ImmigrationProfileID != nil && g.ImmigrationProfile != nil {
+		return g.ImmigrationProfile.Name
 	}
-	if g.UserId != nil && g.User != nil {
+	if g.UserID != nil && g.User != nil {
 		return g.User.FirstName
 	}
 	return ""

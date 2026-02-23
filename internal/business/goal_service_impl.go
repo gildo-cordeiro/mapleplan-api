@@ -3,10 +3,10 @@ package business
 import (
 	"context"
 
+	"github.com/gildo-cordeiro/mapleplan-api/internal/data/models/goal"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/dto/goal/mapper"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/dto/goal/request"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/dto/goal/response"
-	"github.com/gildo-cordeiro/mapleplan-api/internal/data/models/goal"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/ports"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/ports/repositories"
 	"github.com/gildo-cordeiro/mapleplan-api/internal/ports/services"
@@ -14,39 +14,21 @@ import (
 )
 
 type GoalServiceImpl struct {
-	UserRepository repositories.UserRepository
-	Couple         repositories.CoupleRepository
-	GoalRepository repositories.GoalRepository
-	txManager      ports.TransactionManager
+	UserRepository          repositories.UserRepository
+	ProfileRepository       repositories.ProfileRepository
+	ProfileMemberRepository repositories.ProfileMemberRepository
+	GoalRepository          repositories.GoalRepository
+	txManager               ports.TransactionManager
 }
 
-func NewGoalService(userRepo repositories.UserRepository, goalRepo repositories.GoalRepository, couple repositories.CoupleRepository, txManager ports.TransactionManager) services.GoalService {
+func NewGoalService(userRepo repositories.UserRepository, goalRepo repositories.GoalRepository, profileRepo repositories.ProfileRepository, memberRepo repositories.ProfileMemberRepository, txManager ports.TransactionManager) services.GoalService {
 	return &GoalServiceImpl{
-		UserRepository: userRepo,
-		GoalRepository: goalRepo,
-		Couple:         couple,
-		txManager:      txManager,
+		UserRepository:          userRepo,
+		GoalRepository:          goalRepo,
+		ProfileRepository:       profileRepo,
+		ProfileMemberRepository: memberRepo,
+		txManager:               txManager,
 	}
-}
-
-func (g *GoalServiceImpl) GetWidgetGoals(ctx context.Context, userID string, limit int) ([]response.WidgetGoalResponse, error) {
-	var goals []response.WidgetGoalResponse
-
-	err := g.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		widgetGoals, err := g.GoalRepository.FindWidgetGoals(txCtx, userID, limit)
-		if err != nil {
-			return err
-		}
-		for _, widgetGoal := range widgetGoals {
-			goals = append(goals, mapper.ToWidgetGoalResponse(widgetGoal))
-		}
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return goals, nil
 }
 
 func (g *GoalServiceImpl) GetStatusCounts(ctx context.Context, userID string) (response.GoalStatusCountResponse, error) {
@@ -99,13 +81,13 @@ func (g *GoalServiceImpl) CreateGoal(ctx context.Context, req request.CreateGoal
 			if err != nil {
 				return err
 			}
-			goalToSave.UserId = &user.ID
-		} else if req.AssignedToCouple != nil && *req.AssignedToCouple != "" {
-			c, err := g.Couple.FindByID(txCtx, *req.AssignedToCouple)
+			goalToSave.UserID = &user.ID
+		} else if req.AssignedToProfile != nil && *req.AssignedToProfile != "" {
+			p, err := g.ProfileRepository.FindByID(txCtx, *req.AssignedToProfile)
 			if err != nil {
 				return err
 			}
-			goalToSave.CoupleID = &c.ID
+			goalToSave.ImmigrationProfileID = &p.ID
 		} else {
 			return utils.ErrInvalidGoalAssignment
 		}
@@ -117,11 +99,11 @@ func (g *GoalServiceImpl) CreateGoal(ctx context.Context, req request.CreateGoal
 	return nil
 }
 
-func (g *GoalServiceImpl) GetGoals(ctx context.Context, userID string) ([]response.GoalResponse, error) {
+func (g *GoalServiceImpl) GetGoals(ctx context.Context, userID string, limit *int) ([]response.GoalResponse, error) {
 	goals := make([]response.GoalResponse, 0)
 
 	err := g.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		foundGoals, err := g.GoalRepository.FindGoals(txCtx, userID)
+		foundGoals, err := g.GoalRepository.FindGoals(txCtx, userID, limit)
 		if err != nil {
 			return err
 		}
@@ -159,15 +141,15 @@ func (g *GoalServiceImpl) UpdateGoal(ctx context.Context, goalID string, req req
 			if err != nil {
 				return err
 			}
-			goalToUpdate.UserId = &user.ID
-			goalToUpdate.CoupleID = nil
-		} else if req.AssignedToCouple != "" {
-			c, err := g.Couple.FindByID(txCtx, req.AssignedToCouple)
+			goalToUpdate.UserID = &user.ID
+			goalToUpdate.ImmigrationProfileID = nil
+		} else if req.AssignedToProfile != "" {
+			p, err := g.ProfileRepository.FindByID(txCtx, req.AssignedToProfile)
 			if err != nil {
 				return err
 			}
-			goalToUpdate.CoupleID = &c.ID
-			goalToUpdate.UserId = nil
+			goalToUpdate.ImmigrationProfileID = &p.ID
+			goalToUpdate.UserID = nil
 		}
 
 		return g.GoalRepository.Update(txCtx, goalID, goalToUpdate)
