@@ -165,8 +165,8 @@ func (s *UserServiceImpl) GetCompleteUser(ctx context.Context, userID string) (*
 		}
 
 		// If user has profile memberships, use the first one (typically should have one main profile)
-		if len(members) > 0 && members[0].Profile != nil {
-			profile := members[0].Profile
+		if len(members) > 0 && members[0].ImmigrationProfile != nil {
+			profile := members[0].ImmigrationProfile
 			userFounded.CoupleID = &profile.ID // Use ProfileID as CoupleID for backward compatibility
 
 			// Find other members of this profile to get partner info

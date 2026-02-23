@@ -31,7 +31,7 @@ func (g *GoalRepositoryImpl) FindWidgetGoals(ctx context.Context, userID string,
 	db := g.getDB(ctx)
 
 	if profileID != nil {
-		err := db.Preload("Profile").Preload("User").
+		err := db.Preload("ImmigrationProfile").Preload("User").
 			Where("profile_id = ?", *profileID).
 			Order("created_at DESC").
 			Limit(limit).
@@ -40,7 +40,7 @@ func (g *GoalRepositoryImpl) FindWidgetGoals(ctx context.Context, userID string,
 			return nil, err
 		}
 	} else {
-		err := db.Preload("Profile").Preload("User").
+		err := db.Preload("ImmigrationProfile").Preload("User").
 			Where("user_id = ?", userID).
 			Order("created_at DESC").
 			Limit(limit).
@@ -65,7 +65,7 @@ func (g *GoalRepositoryImpl) CountGoalsByStatus(ctx context.Context, userID stri
 	err := db.
 		Table("goals").
 		Select("status, COUNT(*) as count").
-		Joins("LEFT JOIN profile_members ON goals.profile_id = profile_members.profile_id").
+		Joins("LEFT JOIN profile_members ON goals.immigration_profile_id = profile_members.immigration_profile_id").
 		Where("profile_members.user_id = ? OR goals.user_id = ?", userID, userID).
 		Group("status").
 		Scan(&results).Error
@@ -82,7 +82,7 @@ func (g *GoalRepositoryImpl) CountGoalsByStatus(ctx context.Context, userID stri
 
 func (g *GoalRepositoryImpl) FindByID(ctx context.Context, id string) (*goal.Goal, error) {
 	var foundedGoal goal.Goal
-	err := g.getDB(ctx).Preload("User").Preload("Profile").First(&foundedGoal, "id = ?", id).Error
+	err := g.getDB(ctx).Preload("User").Preload("ImmigrationProfile").First(&foundedGoal, "id = ?", id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -100,8 +100,8 @@ func (g *GoalRepositoryImpl) Save(ctx context.Context, goal *goal.Goal) error {
 func (g *GoalRepositoryImpl) FindGoals(ctx context.Context, userID string, limit *int) ([]*goal.Goal, error) {
 	var goals []*goal.Goal
 	db := g.getDB(ctx)
-	query := db.Preload("User").Preload("Profile").
-		Joins("LEFT JOIN profile_members ON goals.profile_id = profile_members.profile_id").
+	query := db.Preload("User").Preload("ImmigrationProfile").
+		Joins("LEFT JOIN profile_members ON goals.immigration_profile_id = profile_members.immigration_profile_id").
 		Where("profile_members.user_id = ? OR goals.user_id = ?", userID, userID).
 		Order("goals.created_at DESC")
 

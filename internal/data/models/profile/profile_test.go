@@ -30,9 +30,9 @@ func TestProfileMemberRoleValidation(t *testing.T) {
 
 func TestProfileMemberChangeRole(t *testing.T) {
 	member := &ProfileMember{
-		ProfileID: "profile-123",
-		UserID:    "user-456",
-		Role:      RolePrimary,
+		ImmigrationProfileID: "profile-123",
+		UserID:               "user-456",
+		Role:                 RolePrimary,
 	}
 
 	err := member.ChangeRole(RoleSpouse)
@@ -47,9 +47,9 @@ func TestProfileMemberChangeRole(t *testing.T) {
 
 func TestProfileMemberChangeRoleInvalid(t *testing.T) {
 	member := &ProfileMember{
-		ProfileID: "profile-123",
-		UserID:    "user-456",
-		Role:      RolePrimary,
+		ImmigrationProfileID: "profile-123",
+		UserID:               "user-456",
+		Role:                 RolePrimary,
 	}
 
 	err := member.ChangeRole(MemberRole("invalid"))
